@@ -16,17 +16,59 @@ main:
     mov sp, 0x7C00
     sti ; enable interrupts
 
+    call show_BPB
+    jmp hang
+
+
+show_BPB:
+    mov si, logical_sector
+    call print_loop
+
+    mov al, ':'
+    call print_char
+
+    mov al, ' '
+    call print_char
+    
+    mov ax, [0x7C0B]
     mov di, buffer
-    mov ax, 2458
+    call itos
+    mov si, di
+    call print_loop
+
+    mov al, 0x0D
+    call print_char
+
+    mov al, 0x0A
+    call print_char
+
+    mov si, cluster_size
+    call print_loop
+
+    mov al, ':'
+    call print_char
+
+    mov al, ' '
+    call print_char
+
+    xor ax, ax
+    mov al, [0x7C0D]
+
+
+    mov di, buffer2
     call itos
     mov si, di
     call print_loop
 
 
-    mov si, msg_hello
-    call print_loop
 
-    jmp hang
+    ret
+
+print_char:
+    mov ah, 0x0E
+    int 0x10
+    ret
+
 
 print_loop:
     lodsb
@@ -100,9 +142,10 @@ hang:
 
 msg_hello db "Bootloader via mtools is running!", 0x0D, 0x0A, 0
 buffer times 60 db 0
+buffer2 times 60 db 0
 
-logical_sector db "Logical sector size", 0x0D, 0x0A, 0
-cluster_size db "Cluster size", 0x0D, 0x0A, 0
+logical_sector db "Logical sector size", 0
+cluster_size db "Cluster size", 0
 
 
 ; pad remaining part of sector with 0 and add the signature at the end

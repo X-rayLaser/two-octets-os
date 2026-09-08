@@ -16,7 +16,64 @@ main:
     mov sp, 0x7C00
     sti ; enable interrupts
 
+
+    call init_daps
+    call print_root_directory
+
     jmp hang
+
+
+init_daps:
+    ; set packet size to 16 bytes
+    mov al, 16
+    mov [daps], al
+
+    ; transfer buffer address segment:offset defined right after the end of bootloader code in memory
+    mov bx, 0x7c00+512
+    mov [daps+4], bx ; lower 16 bits for offset
+    mov bx, 0
+    mov [daps+6], bx ; higher 16 bits for data segment
+    ret
+
+
+print_root_directory:
+    ; find address of Root region
+    xor al, al
+    mov al, [0x7c00+0x010] ; # of FATs
+
+    mov bx, [0x7c00+0x016] ; # logical sectors per FAT
+
+    xor dx, dx
+    mul bx ; ax = # of sectors occupied by FAT region
+
+    mov bx, [0x7c00+0x00E] ; Reserved logical sectors
+    add ax, bx ; ax = first logical sector of root directory
+
+    ; set LBA address of sector to read
+    mov [daps+8], ax
+
+    ; ax will store size of root directory in bytes
+    xor dx, dx
+    mov ax, [0x7c00+0x011] ; number of directory entries
+    mov bx, 32
+    mul bx
+
+    ; ax will store number of logical sectors to read
+    xor dx, dx
+    mov bx, [0x7c00+0x00B] ; size of logical sector in bytes
+    div bx
+
+
+    mov di, buffer
+    call clear_buffer
+    call itos
+    mov si, di
+    call print_loop
+
+    ; finalize daps structure
+    ; set # of sectors to read
+    mov [daps+2], ax
+    ret
 
 
 clear_buffer:
@@ -120,6 +177,10 @@ hang:
 
 msg_hello db "Bootloader via mtools is running!", 0x0D, 0x0A, 0
 buffer times 60 db 0
+
+; Disk Address Packet Structure
+align 4
+daps times 16 db 0
 
 ; pad remaining part of sector with 0 and add the signature at the end
 times 510-($-$$) db 0

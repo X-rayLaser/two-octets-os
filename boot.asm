@@ -15,7 +15,7 @@ main:
     mov ss, ax
     mov sp, 0x7C00
     sti ; enable interrupts
-
+    mov [boot_drive], dl
 
     call init_daps
     call print_root_directory
@@ -73,7 +73,25 @@ print_root_directory:
     ; finalize daps structure
     ; set # of sectors to read
     mov [daps+2], ax
-    ret
+
+    ; issuing BIOS interrupt for reading disk sectors using LBA addressing
+    mov ah, 0x42
+    mov dl, [boot_drive] ; set drive number to floppy disk A
+    int 0x13
+
+    jc print_root_directory__error
+    mov si, msg_success
+    call print_loop
+
+    jmp print_root_directory__finish
+
+    print_root_directory__error:
+        ; hadle error
+        mov si, msg_disk_error
+        call print_loop
+
+    print_root_directory__finish:
+        ret
 
 
 clear_buffer:
@@ -175,6 +193,9 @@ itos:
 hang:
     jmp hang
 
+boot_drive: db 0
+msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
+msg_success db "Disk read succeeded!", 0x0D, 0x0A, 0
 msg_hello db "Bootloader via mtools is running!", 0x0D, 0x0A, 0
 buffer times 60 db 0
 

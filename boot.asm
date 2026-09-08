@@ -70,18 +70,40 @@ print_root_directory:
     mov si, di
     call print_loop
 
+
     ; finalize daps structure
     ; set # of sectors to read
     mov [daps+2], ax
 
     ; issuing BIOS interrupt for reading disk sectors using LBA addressing
     mov ah, 0x42
-    mov dl, [boot_drive] ; set drive number to floppy disk A
+    mov dl, [boot_drive] ; set drive number to boot drive
     int 0x13
 
     jc print_root_directory__error
     mov si, msg_success
     call print_loop
+
+    mov si, 0x7c00+512
+
+    mov di, buffer
+    call clear_buffer
+
+    mov cx, 8
+
+    print_root_directory__getchar:
+        cmp cx, 0
+        jle print_root_directory__gotname
+
+        lodsb
+        mov [di], al
+        inc di
+        dec cx
+        jmp print_root_directory__getchar
+
+    print_root_directory__gotname:
+        mov si, buffer
+        call print_loop
 
     jmp print_root_directory__finish
 

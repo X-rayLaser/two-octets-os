@@ -175,11 +175,14 @@ hang:
 
 msg_hello db "Bootloader via mtools is running!", 0x0D, 0x0A, 0
 buffer times 60 db 0
-buffer2 times 60 db 0
 
 logical_sector db "Logical sector size", 0
 cluster_size db "Cluster size", 0
-
+reserved_logical_sectors db "Reserved logical sectors", 0
+fat_num db "Number of FATs", 0
+num_root_entries db "Root directory entries", 0
+total_logical_sectors db "Total logical sectors", 0
+sectors_per_fat db "Logical sectors per FAT", 0
 
 ; pad remaining part of sector with 0 and add the signature at the end
 times 510-($-$$) db 0

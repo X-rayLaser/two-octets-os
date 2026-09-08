@@ -1,28 +1,5 @@
 [org 0x7c00]
 
-%macro macro_print_byte_field 2
-    mov si, %1
-    call print_loop
-    call print_separator
-    
-    xor ax, ax
-    mov al, [%2]
-    call print_field_value
-
-    call carriage_return
-%endmacro
-
-%macro macro_print_word_field 2
-    mov si, %1
-    call print_loop
-    call print_separator
-    
-    mov ax, [%2]
-    call print_field_value
-
-    call carriage_return
-%endmacro
-
 jmp short main
 nop
 
@@ -39,38 +16,8 @@ main:
     mov sp, 0x7C00
     sti ; enable interrupts
 
-    call show_BPB
     jmp hang
 
-
-show_BPB:
-    ret
-
-
-print_separator:
-    mov al, ':'
-    call print_char
-    mov al, ' '
-    call print_char
-    ret
-
-print_field_value:
-    ; value is looked up in ax
-    mov di, buffer
-    call clear_buffer
-    call itos
-    mov si, di
-    call print_loop
-    ret
-
-
-carriage_return:
-    mov al, 0x0D
-    call print_char
-
-    mov al, 0x0A
-    call print_char
-    ret
 
 clear_buffer:
     push ax

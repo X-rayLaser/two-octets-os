@@ -71,33 +71,25 @@ print_root_directory:
 
     mov ah, 0x42
     mov dl, [boot_drive] ; set drive number to boot drive
-    mov si, daps
+    mov si, daps         ; pass an address of data structure before BIOS call
     int 0x13
 
     jc print_root_directory__error
-    mov si, msg_success
+    mov si, root_directory
     call print_loop
 
     mov si, 0x7c00+512
 
-    mov di, buffer
-    call clear_buffer
+    print_root_directory__print_entry:
+        mov al, [si]
+        cmp al, 0
+        je print_root_directory__finish
 
-    mov cx, 8
+        call print_directory_entry
+        add si, 32  ; go to the next entry
 
-    print_root_directory__getchar:
-        cmp cx, 0
-        jle print_root_directory__gotname
+        jmp print_root_directory__print_entry
 
-        lodsb
-        mov [di], al
-        inc di
-        dec cx
-        jmp print_root_directory__getchar
-
-    print_root_directory__gotname:
-        mov si, buffer
-        call print_loop
 
     jmp print_root_directory__finish
 
@@ -107,6 +99,61 @@ print_root_directory:
         call print_loop
 
     print_root_directory__finish:
+        ret
+
+
+print_directory_entry:
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    
+    mov di, buffer
+    call clear_buffer
+
+    mov cx, 11
+
+    print_directory_entry__getchar:
+        cmp cx, 3
+        jle print_directory_entry__gotname
+
+        lodsb
+        mov [di], al
+        inc di
+        dec cx
+        jmp print_directory_entry__getchar
+
+    print_directory_entry__gotname:
+        mov al, '.'
+        mov [di], al
+        inc di
+
+    print_directory_entry__get_extension:
+        cmp cx, 0
+        jle print_directory_entry__finish
+
+        lodsb
+        mov [di], al
+        inc di
+        dec cx
+        jmp print_directory_entry__get_extension
+
+    print_directory_entry__finish:
+        mov al, 0x0D
+        mov [di], al
+        inc di
+        mov al, 0x0A
+        mov [di], al
+        
+        mov si, buffer
+        call print_loop
+
+        pop si
+        pop dx
+        pop cx
+        pop bx
+        pop ax
         ret
 
 
@@ -211,8 +258,7 @@ hang:
 
 boot_drive: db 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
-msg_success db "Disk read succeeded!", 0x0D, 0x0A, 0
-msg_hello db "Bootloader via mtools is running!", 0x0D, 0x0A, 0
+root_directory db "Root directory:", 0x0D, 0x0A, 0
 buffer times 60 db 0
 
 ; Disk Address Packet Structure

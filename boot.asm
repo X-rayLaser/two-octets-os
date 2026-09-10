@@ -37,8 +37,45 @@ init_daps:
 
 
 print_root_directory:
+    call read_root_directory
+
+    jc print_root_directory__error
+    push si
+    mov si, root_directory
+    call print_loop
+    pop si
+
+    print_root_directory__print_entry:
+        mov al, [si]
+        cmp al, 0
+        je print_root_directory__finish
+
+        call print_directory_entry
+        add si, 32  ; go to the next entry
+
+        jmp print_root_directory__print_entry
+
+
+    jmp print_root_directory__finish
+
+    print_root_directory__error:
+        ; hadle error
+        mov si, msg_disk_error
+        call print_loop
+
+    print_root_directory__finish:
+        ret
+
+
+read_root_directory:
+    push ax
+    push bx
+    push cx
+    push dx
+    push di
+
     ; find address of Root region
-    xor al, al
+    xor ax, ax
     mov al, [0x7c00+0x010] ; # of FATs
 
     mov bx, [0x7c00+0x016] ; # logical sectors per FAT
@@ -74,32 +111,14 @@ print_root_directory:
     mov si, daps         ; pass an address of data structure before BIOS call
     int 0x13
 
-    jc print_root_directory__error
-    mov si, root_directory
-    call print_loop
-
     mov si, 0x7c00+512
 
-    print_root_directory__print_entry:
-        mov al, [si]
-        cmp al, 0
-        je print_root_directory__finish
-
-        call print_directory_entry
-        add si, 32  ; go to the next entry
-
-        jmp print_root_directory__print_entry
-
-
-    jmp print_root_directory__finish
-
-    print_root_directory__error:
-        ; hadle error
-        mov si, msg_disk_error
-        call print_loop
-
-    print_root_directory__finish:
-        ret
+    pop di
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
 
 
 print_directory_entry:

@@ -18,7 +18,6 @@ main:
     mov [boot_drive], dl
 
     call init_daps
-    call print_root_directory
 
     jmp hang
 
@@ -36,34 +35,81 @@ init_daps:
     ret
 
 
-print_root_directory:
+get_kernel_first_cluster:
+    push ax
+    push cx
+    push dx
+    push si
+    push di
+
     call read_root_directory
 
-    jc print_root_directory__error
-    push si
-    mov si, root_directory
-    call print_loop
-    pop si
+    mov bl, -1  ; if not found, bl = -1
 
-    print_root_directory__print_entry:
+    get_kernel_first_cluster__check_entry:
         mov al, [si]
         cmp al, 0
-        je print_root_directory__finish
+        je get_kernel_first_cluster__finish
 
-        call print_directory_entry
-        add si, 32  ; go to the next entry
+        call is_kernel
+        cmp bl, -1
+        jne get_kernel_first_cluster__finish
 
-        jmp print_root_directory__print_entry
+        add si, 32
+        jmp get_kernel_first_cluster__check_entry
+
+    get_kernel_first_cluster__finish:
+        pop di
+        pop si
+        pop dx
+        pop cx
+        pop ax
+        ret
 
 
-    jmp print_root_directory__finish
+is_kernel:
+    push ax
+    push cx
+    push dx
+    push si
+    push di
 
-    print_root_directory__error:
-        ; hadle error
-        mov si, msg_disk_error
-        call print_loop
+    mov di, file_name
+    mov cx, 8
 
-    print_root_directory__finish:
+    mov bl, -1  ; if not found, bl = -1
+
+
+    is_kernel__compare_char:
+        cmp cx, 0
+        je is_kernel__found
+
+        lodsb
+        mov dl, [di]
+
+        cmp al, dl
+        jne is_kernel__finish
+
+        inc di
+        dec cx
+
+        jmp is_kernel__compare_char
+    
+    is_kernel__found:
+        pop di
+        pop si
+        pop dx
+        pop cx
+        pop ax
+        mov bl, [si+26]
+        ret
+    
+    is_kernel__finish:
+        pop di
+        pop si
+        pop dx
+        pop cx
+        pop ax
         ret
 
 
@@ -121,59 +167,36 @@ read_root_directory:
     ret
 
 
-print_directory_entry:
+read_fat:
     push ax
     push bx
     push cx
     push dx
-    push si
-    
-    mov di, buffer
-    call clear_buffer
+    push di
 
-    mov cx, 11
+    ; set number of sectors to transfer
+    mov bx, [0x7c00+0x016] ; # logical sectors per FAT
+    mov [daps+2], bx
 
-    print_directory_entry__getchar:
-        cmp cx, 3
-        jle print_directory_entry__gotname
+    ; set LBA address of sector to read
+    mov ax, [0x7c00+0x00E] ; Reserved logical sectors
+    mov [daps+8], ax
 
-        lodsb
-        mov [di], al
-        inc di
-        dec cx
-        jmp print_directory_entry__getchar
+    ; issuing BIOS interrupt for reading disk sectors using LBA addressing
 
-    print_directory_entry__gotname:
-        mov al, '.'
-        mov [di], al
-        inc di
+    mov ah, 0x42
+    mov dl, [boot_drive] ; set drive number to boot drive
+    mov si, daps         ; pass an address of data structure before BIOS call
+    int 0x13
 
-    print_directory_entry__get_extension:
-        cmp cx, 0
-        jle print_directory_entry__finish
+    mov si, 0x7c00+512
 
-        lodsb
-        mov [di], al
-        inc di
-        dec cx
-        jmp print_directory_entry__get_extension
-
-    print_directory_entry__finish:
-        mov al, 0x0D
-        mov [di], al
-        inc di
-        mov al, 0x0A
-        mov [di], al
-        
-        mov si, buffer
-        call print_loop
-
-        pop si
-        pop dx
-        pop cx
-        pop bx
-        pop ax
-        ret
+    pop di
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
 
 
 clear_buffer:
@@ -216,73 +239,17 @@ print_loop:
     print__finish:
         ret
 
-
-itos:
-    push ax
-    push bx
-    push cx
-    push dx
-    push si
-    push di
-    mov bx, 0
-
-
-    test ax, ax
-    js itos__signed
-    jnz itos__getdigit
-
-    mov dl, '0'
-    mov [di], dl
-    jmp itos__end
-
-    itos__signed:
-        neg ax
-        mov dl, '-'
-        mov [di], dl
-        inc di
-
-    itos__getdigit:
-        cmp ax, 0
-        je itos__flush
-        xor dx, dx
-        mov cx, 10
-        div cx
-
-        add dl, 48
-        mov dh, 0
-        push dx
-        inc bx
-        jmp itos__getdigit
-
-    itos__flush:
-        cmp bx, 0
-        je itos__end
-
-        pop ax
-        stosb
-        dec bx
-        jmp itos__flush
-
-    itos__end:
-        pop di
-        pop si
-        pop dx
-        pop cx
-        pop bx
-        pop ax
-        ret
-
 hang:
     jmp hang
 
 boot_drive: db 0
-msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
-root_directory db "Root directory:", 0x0D, 0x0A, 0
 buffer times 60 db 0
 
 ; Disk Address Packet Structure
 align 4
 daps times 16 db 0
+
+file_name db "KERNEL", 0, 0
 
 ; pad remaining part of sector with 0 and add the signature at the end
 times 510-($-$$) db 0

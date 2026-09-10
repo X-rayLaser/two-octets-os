@@ -63,21 +63,15 @@ print_root_directory:
     mov bx, [0x7c00+0x00B] ; size of logical sector in bytes
     div bx
 
-
-    mov di, buffer
-    call clear_buffer
-    call itos
-    mov si, di
-    call print_loop
-
-
     ; finalize daps structure
     ; set # of sectors to read
     mov [daps+2], ax
 
     ; issuing BIOS interrupt for reading disk sectors using LBA addressing
+
     mov ah, 0x42
     mov dl, [boot_drive] ; set drive number to boot drive
+    mov si, daps
     int 0x13
 
     jc print_root_directory__error

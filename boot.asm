@@ -18,6 +18,9 @@ main:
     mov [boot_drive], dl
 
     call init_daps
+    call get_kernel_first_cluster
+
+    call load_kernel
 
     jmp hang
 
@@ -44,7 +47,7 @@ get_kernel_first_cluster:
 
     call read_root_directory
 
-    mov bl, -1  ; if not found, bl = -1
+    mov bx, -1  ; if not found, bx = -1
 
     get_kernel_first_cluster__check_entry:
         mov al, [si]
@@ -52,7 +55,7 @@ get_kernel_first_cluster:
         je get_kernel_first_cluster__finish
 
         call is_kernel
-        cmp bl, -1
+        cmp bx, -1
         jne get_kernel_first_cluster__finish
 
         add si, 32
@@ -75,9 +78,9 @@ is_kernel:
     push di
 
     mov di, file_name
-    mov cx, 8
+    mov cx, 6
 
-    mov bl, -1  ; if not found, bl = -1
+    mov bx, -1  ; if not found, bx = -1
 
 
     is_kernel__compare_char:
@@ -101,7 +104,7 @@ is_kernel:
         pop dx
         pop cx
         pop ax
-        mov bl, [si+26]
+        mov bx, [si+26]
         ret
     
     is_kernel__finish:
@@ -133,7 +136,11 @@ read_root_directory:
     add ax, bx ; ax = first logical sector of root directory
 
     ; set LBA address of sector to read
+
+    mov dword [daps+12], 0 ; set field to zero
+    mov dword [daps+8], 0  ; set field to zero
     mov [daps+8], ax
+
 
     ; ax will store size of root directory in bytes
     xor dx, dx
@@ -199,12 +206,43 @@ read_fat:
     ret
 
 
+load_kernel:
+    ; set number of sectors to transfer
+    mov ax, 1
+    mov [daps+2], ax
+
+    mov dword [daps+12], 0 ; set field to zero
+    mov dword [daps+8], 0  ; set field to zero
+
+    add bx, 33
+    mov [daps+8], bx
+
+    ; issuing BIOS interrupt for reading disk sectors using LBA addressing
+
+    mov ah, 0x42
+    mov dl, [boot_drive] ; set drive number to boot drive
+    mov si, daps         ; pass an address of data structure before BIOS call
+    int 0x13
+
+    jc some_error
+
+    mov si, 0x7c00+512
+    call print_loop
+    jmp load_kernel__finish
+
+    some_error:
+        mov si, error
+        call print_loop
+
+    load_kernel__finish:
+        ret
+
 clear_buffer:
     push ax
     push bx
     push di
 
-    mov cx, 60
+    mov cx, 50
 
     clear_buffer__loop:
         cmp cx, 0
@@ -243,13 +281,14 @@ hang:
     jmp hang
 
 boot_drive: db 0
-buffer times 60 db 0
+buffer times 50 db 0
 
 ; Disk Address Packet Structure
 align 4
 daps times 16 db 0
 
 file_name db "KERNEL", 0, 0
+error db "disk error", 0, 0
 
 ; pad remaining part of sector with 0 and add the signature at the end
 times 510-($-$$) db 0

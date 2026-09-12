@@ -1,5 +1,34 @@
 [org 0x7c00]
 
+%macro push_abcd 0
+    push ax
+    push bx
+    push cx
+    push dx
+%endmacro
+
+%macro pop_dcba 0
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+%endmacro
+
+%macro set_lba_address 1
+    ; set LBA address of sector to read
+    mov dword [daps+12], 0 ; set field to zero
+    mov dword [daps+8], 0  ; set field to zero
+    mov [daps+8], %1
+%endmacro
+
+%macro read_disk_lba 0
+    ; issuing BIOS interrupt for reading disk sectors using LBA addressing
+    mov ah, 0x42
+    mov dl, [boot_drive] ; set drive number to boot drive
+    mov si, daps         ; pass an address of data structure before BIOS call
+    int 0x13
+%endmacro
+
 jmp short main
 nop
 
@@ -74,14 +103,14 @@ is_kernel:
     push ax
     push cx
     push dx
-    push si
     push di
+
+    push si
 
     mov di, file_name
     mov cx, 6
 
     mov bx, -1  ; if not found, bx = -1
-
 
     is_kernel__compare_char:
         cmp cx, 0
@@ -99,17 +128,14 @@ is_kernel:
         jmp is_kernel__compare_char
     
     is_kernel__found:
-        pop di
         pop si
-        pop dx
-        pop cx
-        pop ax
         mov bx, [si+26]
-        ret
-    
+        push si
+
     is_kernel__finish:
-        pop di
         pop si
+
+        pop di
         pop dx
         pop cx
         pop ax
@@ -117,10 +143,7 @@ is_kernel:
 
 
 read_root_directory:
-    push ax
-    push bx
-    push cx
-    push dx
+    push_abcd
     push di
 
     ; find address of Root region
@@ -135,12 +158,7 @@ read_root_directory:
     mov bx, [0x7c00+0x00E] ; Reserved logical sectors
     add ax, bx ; ax = first logical sector of root directory
 
-    ; set LBA address of sector to read
-
-    mov dword [daps+12], 0 ; set field to zero
-    mov dword [daps+8], 0  ; set field to zero
-    mov [daps+8], ax
-
+    set_lba_address ax
 
     ; ax will store size of root directory in bytes
     xor dx, dx
@@ -157,28 +175,17 @@ read_root_directory:
     ; set # of sectors to read
     mov [daps+2], ax
 
-    ; issuing BIOS interrupt for reading disk sectors using LBA addressing
-
-    mov ah, 0x42
-    mov dl, [boot_drive] ; set drive number to boot drive
-    mov si, daps         ; pass an address of data structure before BIOS call
-    int 0x13
+    read_disk_lba
 
     mov si, 0x7c00+512
 
     pop di
-    pop dx
-    pop cx
-    pop bx
-    pop ax
+    pop_dcba
     ret
 
 
 read_fat:
-    push ax
-    push bx
-    push cx
-    push dx
+    push_abcd
     push di
 
     ; set number of sectors to transfer
@@ -187,22 +194,14 @@ read_fat:
 
     ; set LBA address of sector to read
     mov ax, [0x7c00+0x00E] ; Reserved logical sectors
-    mov [daps+8], ax
+    set_lba_address ax
 
-    ; issuing BIOS interrupt for reading disk sectors using LBA addressing
-
-    mov ah, 0x42
-    mov dl, [boot_drive] ; set drive number to boot drive
-    mov si, daps         ; pass an address of data structure before BIOS call
-    int 0x13
+    read_disk_lba
 
     mov si, 0x7c00+512
 
     pop di
-    pop dx
-    pop cx
-    pop bx
-    pop ax
+    pop_dcba
     ret
 
 
@@ -211,18 +210,10 @@ load_kernel:
     mov ax, 1
     mov [daps+2], ax
 
-    mov dword [daps+12], 0 ; set field to zero
-    mov dword [daps+8], 0  ; set field to zero
-
     add bx, 33
-    mov [daps+8], bx
+    set_lba_address bx
 
-    ; issuing BIOS interrupt for reading disk sectors using LBA addressing
-
-    mov ah, 0x42
-    mov dl, [boot_drive] ; set drive number to boot drive
-    mov si, daps         ; pass an address of data structure before BIOS call
-    int 0x13
+    read_disk_lba
 
     jc some_error
 
@@ -242,7 +233,7 @@ clear_buffer:
     push bx
     push di
 
-    mov cx, 50
+    mov cx, 30
 
     clear_buffer__loop:
         cmp cx, 0
@@ -281,7 +272,7 @@ hang:
     jmp hang
 
 boot_drive: db 0
-buffer times 50 db 0
+buffer times 30 db 0
 
 ; Disk Address Packet Structure
 align 4

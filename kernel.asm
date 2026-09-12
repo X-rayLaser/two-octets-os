@@ -141,5 +141,31 @@ itos:
         ret
 
 
+
+clear_buffer:
+    push ax
+    push bx
+    push di
+
+    mov cx, 30
+
+    clear_buffer__loop:
+        cmp cx, 0
+        jle clear_buffer__finish
+
+        mov al, 0
+        mov [di], al
+        inc di
+        dec cx
+        jmp clear_buffer__loop
+
+    clear_buffer__finish:
+        pop di
+        pop bx
+        pop ax
+        ret
+
+
+buffer times 30 db 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
 root_directory db "Root directory:", 0x0D, 0x0A, 0

@@ -29,6 +29,33 @@
     int 0x13
 %endmacro
 
+%macro first_rootdir_sector 0
+    ; find address of Root region
+    xor ax, ax
+    mov al, [0x7c00+0x010] ; # of FATs
+
+    mov bx, [0x7c00+0x016] ; # logical sectors per FAT
+
+    xor dx, dx
+    mul bx ; ax = # of sectors occupied by FAT region
+
+    mov bx, [0x7c00+0x00E] ; Reserved logical sectors
+    add ax, bx ; ax = first logical sector of root directory
+%endmacro
+
+%macro sectors_per_rootdir 0
+    ; ax will store size of root directory in bytes
+    xor dx, dx
+    mov ax, [0x7c00+0x011] ; number of directory entries
+    mov bx, 32
+    mul bx
+
+    ; ax will store number of logical sectors in root directory
+    xor dx, dx
+    mov bx, [0x7c00+0x00B] ; size of logical sector in bytes
+    div bx
+%endmacro
+
 jmp short main
 nop
 
@@ -146,33 +173,10 @@ read_root_directory:
     push_abcd
     push di
 
-    ; find address of Root region
-    xor ax, ax
-    mov al, [0x7c00+0x010] ; # of FATs
-
-    mov bx, [0x7c00+0x016] ; # logical sectors per FAT
-
-    xor dx, dx
-    mul bx ; ax = # of sectors occupied by FAT region
-
-    mov bx, [0x7c00+0x00E] ; Reserved logical sectors
-    add ax, bx ; ax = first logical sector of root directory
-
+    first_rootdir_sector ; ax = starting sector of root directory
     set_lba_address ax
 
-    ; ax will store size of root directory in bytes
-    xor dx, dx
-    mov ax, [0x7c00+0x011] ; number of directory entries
-    mov bx, 32
-    mul bx
-
-    ; ax will store number of logical sectors to read
-    xor dx, dx
-    mov bx, [0x7c00+0x00B] ; size of logical sector in bytes
-    div bx
-
-    ; finalize daps structure
-    ; set # of sectors to read
+    sectors_per_rootdir ; ax = # sectors per root directory
     mov [daps+2], ax
 
     read_disk_lba
@@ -210,7 +214,15 @@ load_kernel:
     mov ax, 1
     mov [daps+2], ax
 
-    add bx, 33
+    push bx
+    first_rootdir_sector ; -> ax
+    mov cx, ax
+
+    sectors_per_rootdir ; -> ax
+    add ax, cx
+
+    pop bx
+    add bx, ax
     set_lba_address bx
 
     read_disk_lba
@@ -228,28 +240,6 @@ load_kernel:
     load_kernel__finish:
         ret
 
-clear_buffer:
-    push ax
-    push bx
-    push di
-
-    mov cx, 30
-
-    clear_buffer__loop:
-        cmp cx, 0
-        jle clear_buffer__finish
-
-        mov al, 0
-        mov [di], al
-        inc di
-        dec cx
-        jmp clear_buffer__loop
-
-    clear_buffer__finish:
-        pop di
-        pop bx
-        pop ax
-        ret
 
 print_char:
     mov ah, 0x0E
@@ -272,7 +262,6 @@ hang:
     jmp hang
 
 boot_drive: db 0
-buffer times 30 db 0
 
 ; Disk Address Packet Structure
 align 4

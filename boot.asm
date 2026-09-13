@@ -21,6 +21,16 @@
     mov [daps+8], %1
 %endmacro
 
+%macro set_transfer_buffer 1
+    ; transfer buffer address segment:offset defined right after the end of bootloader code in memory
+    push bx
+    mov bx, %1
+    mov [daps+4], bx ; lower 16 bits for offset
+    mov bx, 0
+    mov [daps+6], bx ; higher 16 bits for data segment
+    pop bx
+%endmacro
+
 %macro read_disk_lba 0
     ; issuing BIOS interrupt for reading disk sectors using LBA addressing
     mov ah, 0x42
@@ -86,11 +96,7 @@ init_daps:
     mov al, 16
     mov [daps], al
 
-    ; transfer buffer address segment:offset defined right after the end of bootloader code in memory
-    mov bx, 0x7c00+512
-    mov [daps+4], bx ; lower 16 bits for offset
-    mov bx, 0
-    mov [daps+6], bx ; higher 16 bits for data segment
+    set_transfer_buffer 0x7c00+512
     ret
 
 
@@ -179,6 +185,7 @@ read_root_directory:
     sectors_per_rootdir ; ax = # sectors per root directory
     mov [daps+2], ax
 
+    set_transfer_buffer 0x7c00+512
     read_disk_lba
 
     mov si, 0x7c00+512
@@ -200,9 +207,11 @@ read_fat:
     mov ax, [0x7c00+0x00E] ; Reserved logical sectors
     set_lba_address ax
 
+    set_transfer_buffer 0x7c00+1024
+
     read_disk_lba
 
-    mov si, 0x7c00+512
+    mov si, 0x7c00+1024
 
     pop di
     pop_dcba
@@ -238,6 +247,64 @@ load_kernel:
         call print_loop
 
     load_kernel__finish:
+        ret
+
+
+read_next_cluster:
+    ; FAT row number: ax = bx // 2; dl = bx % 2
+    xor dx, dx
+    mov ax, bx
+    mov cx, 2
+    div cx
+
+    push dx
+    ; FAT row address: ax = ax * 3 + FAT offset
+    xor dx, dx
+    mov cx, 3
+    mul cx
+    mov si, 0x7c00
+    add si, 1024
+    add si, ax
+
+    pop dx
+
+    cmp dl, 0
+    jne read_next_cluster__odd
+
+    read_next_cluster__even:
+        xor ax, ax
+        xor bx, bx
+        xor dx, dx
+
+        mov bl, [si]
+        add si, 1
+        mov al, [si]
+
+        ; clear all most significant bits, multiply bu 256
+        shl ax, 12
+        shr ax, 4
+
+        add bx, ax
+
+        jmp read_next_cluster__finish
+
+    read_next_cluster__odd:
+        xor ax, ax
+        xor bx, bx
+        xor dx, dx
+        add si, 1
+
+        ; todo verify
+        mov bl, [si]
+        shr bl, 4
+
+        add si, 1
+        mov al, [si]
+        mov cx, 256
+        mul cx
+        add bx, ax
+
+    read_next_cluster__finish:
         ret
 
 

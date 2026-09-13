@@ -166,6 +166,12 @@ clear_buffer:
         ret
 
 
+print_char:
+    mov ah, 0x0E
+    int 0x10
+    ret
+
+
 buffer times 30 db 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
 root_directory db "Root directory:", 0x0D, 0x0A, 0

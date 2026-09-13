@@ -14,58 +14,6 @@
     pop ax
 %endmacro
 
-%macro set_lba_address 1
-    ; set LBA address of sector to read
-    mov dword [daps+12], 0 ; set field to zero
-    mov dword [daps+8], 0  ; set field to zero
-    mov [daps+8], %1
-%endmacro
-
-%macro set_transfer_buffer 1
-    ; transfer buffer address segment:offset defined right after the end of bootloader code in memory
-    push bx
-    mov bx, %1
-    mov [daps+4], bx ; lower 16 bits for offset
-    mov bx, 0
-    mov [daps+6], bx ; higher 16 bits for data segment
-    pop bx
-%endmacro
-
-%macro read_disk_lba 0
-    ; issuing BIOS interrupt for reading disk sectors using LBA addressing
-    mov ah, 0x42
-    mov dl, [boot_drive] ; set drive number to boot drive
-    mov si, daps         ; pass an address of data structure before BIOS call
-    int 0x13
-%endmacro
-
-%macro first_rootdir_sector 0
-    ; find address of Root region
-    xor ax, ax
-    mov al, [0x7c00+0x010] ; # of FATs
-
-    mov bx, [0x7c00+0x016] ; # logical sectors per FAT
-
-    xor dx, dx
-    mul bx ; ax = # of sectors occupied by FAT region
-
-    mov bx, [0x7c00+0x00E] ; Reserved logical sectors
-    add ax, bx ; ax = first logical sector of root directory
-%endmacro
-
-%macro sectors_per_rootdir 0
-    ; ax will store size of root directory in bytes
-    xor dx, dx
-    mov ax, [0x7c00+0x011] ; number of directory entries
-    mov bx, 32
-    mul bx
-
-    ; ax will store number of logical sectors in root directory
-    xor dx, dx
-    mov bx, [0x7c00+0x00B] ; size of logical sector in bytes
-    div bx
-%endmacro
-
 jmp short main
 nop
 
@@ -96,7 +44,8 @@ init_daps:
     mov al, 16
     mov [daps], al
 
-    set_transfer_buffer 0x7c00+512
+    mov ax, 0x7c00+512
+    call set_transfer_buffer
     ret
 
 
@@ -179,14 +128,15 @@ read_root_directory:
     push_abcd
     push di
 
-    first_rootdir_sector ; ax = starting sector of root directory
-    set_lba_address ax
+    call first_rootdir_sector ; ax = starting sector of root directory
+    call set_lba_address
 
-    sectors_per_rootdir ; ax = # sectors per root directory
+    call sectors_per_rootdir ; ax = # sectors per root directory
     mov [daps+2], ax
 
-    set_transfer_buffer 0x7c00+512
-    read_disk_lba
+    mov ax, 0x7c00+512
+    call set_transfer_buffer
+    call read_disk_lba
 
     mov si, 0x7c00+512
 
@@ -205,11 +155,12 @@ read_fat:
 
     ; set LBA address of sector to read
     mov ax, [0x7c00+0x00E] ; Reserved logical sectors
-    set_lba_address ax
+    call set_lba_address
 
-    set_transfer_buffer 0x7c00+1024
+    mov ax, 0x7c00+1024
+    call set_transfer_buffer
 
-    read_disk_lba
+    call read_disk_lba
 
     mov si, 0x7c00+1024
 
@@ -224,17 +175,17 @@ load_kernel:
     mov [daps+2], ax
 
     push bx
-    first_rootdir_sector ; -> ax
+    call first_rootdir_sector ; -> ax
     mov cx, ax
 
-    sectors_per_rootdir ; -> ax
+    call sectors_per_rootdir ; -> ax
     add ax, cx
 
     pop bx
-    add bx, ax
-    set_lba_address bx
+    add ax, bx
+    call set_lba_address
 
-    read_disk_lba
+    call read_disk_lba
 
     jc some_error
 
@@ -248,6 +199,7 @@ load_kernel:
 
     load_kernel__finish:
         ret
+
 
 
 read_next_cluster:
@@ -308,9 +260,61 @@ read_next_cluster:
         ret
 
 
-print_char:
-    mov ah, 0x0E
-    int 0x10
+
+first_rootdir_sector:
+    ; find address of Root region
+    xor ax, ax
+    mov al, [0x7c00+0x010] ; # of FATs
+
+    mov bx, [0x7c00+0x016] ; # logical sectors per FAT
+
+    xor dx, dx
+    mul bx ; ax = # of sectors occupied by FAT region
+
+    mov bx, [0x7c00+0x00E] ; Reserved logical sectors
+    add ax, bx ; ax = first logical sector of root directory
+    ret
+
+
+sectors_per_rootdir:
+    ; ax will store size of root directory in bytes
+    xor dx, dx
+    mov ax, [0x7c00+0x011] ; number of directory entries
+    mov bx, 32
+    mul bx
+
+    ; ax will store number of logical sectors in root directory
+    xor dx, dx
+    mov bx, [0x7c00+0x00B] ; size of logical sector in bytes
+    div bx
+    ret
+
+
+set_transfer_buffer:
+    ; transfer buffer address segment:offset defined right after the end of bootloader code in memory
+    ; assumes that segment:offset is stored in ax
+
+    mov [daps+4], ax ; lower 16 bits for offset
+    mov ax, 0
+    mov [daps+6], ax ; higher 16 bits for data segment
+    ret
+
+
+
+set_lba_address:
+    ; set LBA address of sector to read
+    mov dword [daps+12], 0 ; set field to zero
+    mov dword [daps+8], 0  ; set field to zero
+    mov [daps+8], ax
+    ret
+
+
+read_disk_lba:
+    ; issuing BIOS interrupt for reading disk sectors using LBA addressing
+    mov ah, 0x42
+    mov dl, [boot_drive] ; set drive number to boot drive
+    mov si, daps         ; pass an address of data structure before BIOS call
+    int 0x13
     ret
 
 
@@ -325,6 +329,7 @@ print_loop:
     print__finish:
         ret
 
+
 hang:
     jmp hang
 
@@ -335,7 +340,7 @@ align 4
 daps times 16 db 0
 
 file_name db "KERNEL", 0, 0
-error db "disk error", 0, 0
+error db "HD error", 0, 0
 
 ; pad remaining part of sector with 0 and add the signature at the end
 times 510-($-$$) db 0

@@ -32,6 +32,7 @@ main:
     mov [boot_drive], dl
 
     call init_daps
+    call read_fat
     call get_kernel_first_cluster
 
     call load_kernel
@@ -50,15 +51,8 @@ init_daps:
 
 
 get_kernel_first_cluster:
-    push ax
-    push cx
-    push dx
-    push si
-    push di
 
     call read_root_directory
-
-    mov bx, -1  ; if not found, bx = -1
 
     get_kernel_first_cluster__check_entry:
         mov al, [si]
@@ -73,11 +67,6 @@ get_kernel_first_cluster:
         jmp get_kernel_first_cluster__check_entry
 
     get_kernel_first_cluster__finish:
-        pop di
-        pop si
-        pop dx
-        pop cx
-        pop ax
         ret
 
 
@@ -134,11 +123,11 @@ read_root_directory:
     call sectors_per_rootdir ; ax = # sectors per root directory
     mov [daps+2], ax
 
-    mov ax, 0x7c00+512
+    mov ax, 0x7c00+10240
     call set_transfer_buffer
     call read_disk_lba
 
-    mov si, 0x7c00+512
+    mov si, 0x7c00+10240
 
     pop di
     pop_dcba
@@ -146,8 +135,7 @@ read_root_directory:
 
 
 read_fat:
-    push_abcd
-    push di
+  
 
     ; set number of sectors to transfer
     mov bx, [0x7c00+0x016] ; # logical sectors per FAT
@@ -164,8 +152,6 @@ read_fat:
 
     mov si, 0x7c00+1024
 
-    pop di
-    pop_dcba
     ret
 
 
@@ -185,13 +171,23 @@ load_kernel:
     add ax, bx
     call set_lba_address
 
-    call read_disk_lba
+    mov ax, 0x7c00+512
+    call set_transfer_buffer
 
+    call read_disk_lba
     jc some_error
+
+    call read_next_cluster ; bx = next cluster number
 
     mov si, 0x7c00+512
     call print_loop
-    jmp load_kernel__finish
+
+    cmp bx, 0xfff
+    je load_kernel__finish
+    cmp bx, 0xff0f
+
+    je load_kernel__finish
+    jmp load_kernel
 
     some_error:
         mov si, error
@@ -298,7 +294,6 @@ set_transfer_buffer:
     mov ax, 0
     mov [daps+6], ax ; higher 16 bits for data segment
     ret
-
 
 
 set_lba_address:

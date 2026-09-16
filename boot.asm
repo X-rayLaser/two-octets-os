@@ -36,8 +36,8 @@ main:
     call get_kernel_first_cluster
 
     call load_kernel
-
-    jmp hang
+    mov dl, [boot_drive]
+    jmp 0x7c00+10240
 
 
 init_daps:
@@ -195,9 +195,6 @@ load_kernel:
         call print_loop
 
     load_kernel__finish:
-
-        mov si, 0x7c00+10240
-        call print_loop
         ret
 
 

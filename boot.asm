@@ -169,6 +169,8 @@ load_kernel:
 
     pop bx
     add ax, bx
+    dec ax
+    dec ax
     call set_lba_address
 
     mov ax, 0x7c00+512
@@ -216,12 +218,13 @@ read_next_cluster:
 
     pop dx
 
+    xor ax, ax
+    xor bx, bx
+
     cmp dl, 0
     jne read_next_cluster__odd
 
     read_next_cluster__even:
-        xor ax, ax
-        xor bx, bx
         xor dx, dx
 
         mov bl, [si]
@@ -237,8 +240,6 @@ read_next_cluster:
         jmp read_next_cluster__finish
 
     read_next_cluster__odd:
-        xor ax, ax
-        xor bx, bx
         xor dx, dx
         add si, 1
 

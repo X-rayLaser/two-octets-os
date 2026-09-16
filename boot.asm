@@ -114,9 +114,6 @@ is_kernel:
 
 
 read_root_directory:
-    push_abcd
-    push di
-
     call first_rootdir_sector ; ax = starting sector of root directory
     call set_lba_address
 
@@ -129,8 +126,6 @@ read_root_directory:
 
     mov si, 0x7c00+10240
 
-    pop di
-    pop_dcba
     ret
 
 
@@ -160,6 +155,8 @@ load_kernel:
     mov ax, 1
     mov [daps+2], ax
 
+    load_kernel__loop:
+
     push bx
     call first_rootdir_sector ; -> ax
     mov cx, ax
@@ -173,31 +170,35 @@ load_kernel:
     dec ax
     call set_lba_address
 
-    mov ax, 0x7c00+512
+    mov ax, 0x7c00+10240
+    add ax, [data_offset]
     call set_transfer_buffer
 
     call read_disk_lba
     jc some_error
 
-    call read_next_cluster ; bx = next cluster number
+    mov ax, [data_offset]
+    add ax, 512
+    mov [data_offset], ax
 
-    mov si, 0x7c00+512
-    call print_loop
+    call read_next_cluster ; bx = next cluster number
 
     cmp bx, 0xfff
     je load_kernel__finish
     cmp bx, 0xff0f
 
     je load_kernel__finish
-    jmp load_kernel
+    jmp load_kernel__loop
 
     some_error:
         mov si, error
         call print_loop
 
     load_kernel__finish:
-        ret
 
+        mov si, 0x7c00+10240
+        call print_loop
+        ret
 
 
 read_next_cluster:
@@ -330,13 +331,14 @@ hang:
     jmp hang
 
 boot_drive: db 0
+data_offset: dw 0
 
 ; Disk Address Packet Structure
 align 4
 daps times 16 db 0
 
 file_name db "KERNEL", 0, 0
-error db "HD error", 0, 0
+error db "HDE", 0, 0
 
 ; pad remaining part of sector with 0 and add the signature at the end
 times 510-($-$$) db 0

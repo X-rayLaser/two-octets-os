@@ -1,4 +1,9 @@
-[org 0x7c00+0x2800]
+[org 0x7e00]
+
+FAT_ADDRESS equ 0x500          ; 8 KB for storing File Allocation Table
+ROOTDIR_ADDRESS equ 0x2500     ; 8 KB for storing Root Directory entries
+DISK_BUFFER_ADDRESS equ 0x4500 ; remaining address space for storing temp data fetched from disk and for stack
+KERNEL_ADDRESS equ 0x7e00      ; loaded kernel will reside in memory directly after bootloader
 
 mov [boot_drive], dl
 call init_daps
@@ -13,13 +18,14 @@ init_daps:
     mov al, 16
     mov [daps], al
 
-    mov ax, 0x7c00+512
+    mov ax, DISK_BUFFER_ADDRESS
     call set_transfer_buffer
     ret
 
 
 print_root_directory:
     call read_root_directory
+    mov si, ROOTDIR_ADDRESS
 
     jc print_root_directory__error
     push si
@@ -113,11 +119,11 @@ read_root_directory:
     call sectors_per_rootdir ; ax = # sectors per root directory
     mov [daps+2], ax
 
-    mov ax, 0x7c00+512
+    mov ax, ROOTDIR_ADDRESS
     call set_transfer_buffer
     call read_disk_lba
 
-    mov si, 0x7c00+512
+    mov si, ROOTDIR_ADDRESS
 
     ret
 

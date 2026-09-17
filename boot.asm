@@ -1,5 +1,10 @@
 [org 0x7c00]
 
+FAT_ADDRESS equ 0x500          ; 8 KB for storing File Allocation Table
+ROOTDIR_ADDRESS equ 0x2500     ; 16 KB for storing Root Directory entries
+DISK_BUFFER_ADDRESS equ 0x6500 ; remaining address space for storing temp data fetched from disk and for stack
+KERNEL_ADDRESS equ 0x7e00      ; loaded kernel will reside in memory directly after bootloader
+
 %macro push_abcd 0
     push ax
     push bx
@@ -37,7 +42,7 @@ main:
 
     call load_kernel
     mov dl, [boot_drive]
-    jmp 0x7c00+10240
+    jmp KERNEL_ADDRESS
 
 
 init_daps:
@@ -45,7 +50,7 @@ init_daps:
     mov al, 16
     mov [daps], al
 
-    mov ax, 0x7c00+512
+    mov ax, DISK_BUFFER_ADDRESS
     call set_transfer_buffer
     ret
 
@@ -120,11 +125,11 @@ read_root_directory:
     call sectors_per_rootdir ; ax = # sectors per root directory
     mov [daps+2], ax
 
-    mov ax, 0x7c00+10240
+    mov ax, ROOTDIR_ADDRESS
     call set_transfer_buffer
     call read_disk_lba
 
-    mov si, 0x7c00+10240
+    mov si, ROOTDIR_ADDRESS
 
     ret
 
@@ -140,12 +145,12 @@ read_fat:
     mov ax, [0x7c00+0x00E] ; Reserved logical sectors
     call set_lba_address
 
-    mov ax, 0x7c00+1024
+    mov ax, FAT_ADDRESS
     call set_transfer_buffer
 
     call read_disk_lba
 
-    mov si, 0x7c00+1024
+    mov si, FAT_ADDRESS
 
     ret
 
@@ -170,7 +175,7 @@ load_kernel:
     dec ax
     call set_lba_address
 
-    mov ax, 0x7c00+10240
+    mov ax, KERNEL_ADDRESS
     add ax, [data_offset]
     call set_transfer_buffer
 
@@ -210,8 +215,7 @@ read_next_cluster:
     xor dx, dx
     mov cx, 3
     mul cx
-    mov si, 0x7c00
-    add si, 1024
+    mov si, FAT_ADDRESS
     add si, ax
 
     pop dx

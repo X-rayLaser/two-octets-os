@@ -1,10 +1,5 @@
 [org 0x7e00]
 
-FAT_ADDRESS equ 0x500          ; 8 KB for storing File Allocation Table
-ROOTDIR_ADDRESS equ 0x2500     ; 8 KB for storing Root Directory entries
-DISK_BUFFER_ADDRESS equ 0x4500 ; remaining address space for storing temp data fetched from disk and for stack
-KERNEL_ADDRESS equ 0x7e00      ; loaded kernel will reside in memory directly after bootloader
-
 mov [boot_drive], dl
 call init_daps
 mov si, msg_hello
@@ -12,15 +7,6 @@ call print_loop
 call print_root_directory
 
 jmp hang
-
-init_daps:
-    ; set packet size to 16 bytes
-    mov al, 16
-    mov [daps], al
-
-    mov ax, DISK_BUFFER_ADDRESS
-    call set_transfer_buffer
-    ret
 
 
 print_root_directory:
@@ -52,7 +38,6 @@ print_root_directory:
 
     print_root_directory__finish:
         ret
-
 
 
 print_directory_entry:
@@ -191,92 +176,22 @@ clear_buffer:
         ret
 
 
-
-first_rootdir_sector:
-    ; find address of Root region
-    xor ax, ax
-    mov al, [0x7c00+0x010] ; # of FATs
-
-    mov bx, [0x7c00+0x016] ; # logical sectors per FAT
-
-    xor dx, dx
-    mul bx ; ax = # of sectors occupied by FAT region
-
-    mov bx, [0x7c00+0x00E] ; Reserved logical sectors
-    add ax, bx ; ax = first logical sector of root directory
-    ret
-
-
-sectors_per_rootdir:
-    ; ax will store size of root directory in bytes
-    xor dx, dx
-    mov ax, [0x7c00+0x011] ; number of directory entries
-    mov bx, 32
-    mul bx
-
-    ; ax will store number of logical sectors in root directory
-    xor dx, dx
-    mov bx, [0x7c00+0x00B] ; size of logical sector in bytes
-    div bx
-    ret
-
-
-set_transfer_buffer:
-    ; transfer buffer address segment:offset defined right after the end of bootloader code in memory
-    ; assumes that segment:offset is stored in ax
-
-    mov [daps+4], ax ; lower 16 bits for offset
-    mov ax, 0
-    mov [daps+6], ax ; higher 16 bits for data segment
-    ret
-
-
-set_lba_address:
-    ; set LBA address of sector to read
-    mov dword [daps+12], 0 ; set field to zero
-    mov dword [daps+8], 0  ; set field to zero
-    mov [daps+8], ax
-    ret
-
-
-read_disk_lba:
-    ; issuing BIOS interrupt for reading disk sectors using LBA addressing
-    mov ah, 0x42
-    mov dl, [boot_drive] ; set drive number to boot drive
-    mov si, daps         ; pass an address of data structure before BIOS call
-    int 0x13
-    ret
-
-
 print_char:
     mov ah, 0x0E
     int 0x10
     ret
 
 
-print_loop:
-    lodsb
-    or al, al
-    jz print__finish
-    mov ah, 0x0E
-    int 0x10
-    jmp print_loop
+%include "util.inc"
 
-    print__finish:
-        ret
 
 hang:
     jmp hang
 
 buffer times 30 db 0
-msg_hello db "Hello from kernel!", 0x0D, 0x0A, 0
+msg_hello db "Hello from kernel, indeed!", 0x0D, 0x0A, 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
 root_directory db "Root directory:", 0x0D, 0x0A, 0
 
-
-boot_drive: db 0
 data_offset: dw 0
 
-; Disk Address Packet Structure
-align 4
-daps times 16 db 0

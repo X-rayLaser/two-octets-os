@@ -76,11 +76,6 @@ get_kernel_first_cluster:
 
 
 is_kernel:
-    push ax
-    push cx
-    push dx
-    push di
-
     push si
 
     mov di, file_name
@@ -110,11 +105,6 @@ is_kernel:
 
     is_kernel__finish:
         pop si
-
-        pop di
-        pop dx
-        pop cx
-        pop ax
         ret
 
 
@@ -222,7 +212,7 @@ read_next_cluster:
 
     push dx
     ; FAT row address: ax = ax * 3 + FAT offset
-    xor dx, dx
+
     mov cx, 3
     mul cx
     mov si, FAT_ADDRESS
@@ -237,38 +227,19 @@ read_next_cluster:
     jne read_next_cluster__odd
 
     read_next_cluster__even:
-        xor dx, dx
-
-        mov bl, [si]
-        add si, 1
-        mov al, [si]
-
-        ; clear all most significant bits, multiply bu 256
-        shl ax, 12
-        shr ax, 4
-
-        add bx, ax
-
+        lodsw
+        mov bx, 0x0fff
+        and bx, ax
         jmp read_next_cluster__finish
 
     read_next_cluster__odd:
-        xor dx, dx
         add si, 1
-
-        ; todo verify
-        mov bl, [si]
-        shr bl, 4
-
-        add si, 1
-        mov al, [si]
-        mov cx, 256
-        mul cx
-        add bx, ax
+        lodsw
+        shr ax, 4
+        mov bx, ax
 
     read_next_cluster__finish:
         ret
-
-
 
 first_rootdir_sector:
     ; find address of Root region
@@ -277,7 +248,6 @@ first_rootdir_sector:
 
     mov bx, [0x7c00+0x016] ; # logical sectors per FAT
 
-    xor dx, dx
     mul bx ; ax = # of sectors occupied by FAT region
 
     mov bx, [0x7c00+0x00E] ; Reserved logical sectors
@@ -287,7 +257,6 @@ first_rootdir_sector:
 
 sectors_per_rootdir:
     ; ax will store size of root directory in bytes
-    xor dx, dx
     mov ax, [0x7c00+0x011] ; number of directory entries
     mov bx, 32
     mul bx
@@ -349,7 +318,7 @@ align 4
 daps times 16 db 0
 
 file_name db "KERNEL", 0, 0
-error db "HDE", 0, 0
+error db "HDE", 0
 
 ; pad remaining part of sector with 0 and add the signature at the end
 times 510-($-$$) db 0

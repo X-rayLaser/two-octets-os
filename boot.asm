@@ -163,17 +163,27 @@ load_kernel:
     load_kernel__loop:
 
     push bx
+    
+    ; ax = (bx - 2) * cluster size
+    dec bx
+    dec bx
+    mov ax, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mul bx                 ; ax = offset of cluster's first sector
+
+    push ax
+
+    ; ax = first_rootdir_sector + sectors_per_rootdir
     call first_rootdir_sector ; -> ax
     mov cx, ax
-
     call sectors_per_rootdir ; -> ax
     add ax, cx
 
-    pop bx
-    add ax, bx
-    dec ax
-    dec ax
+    pop cx ; restore ax (cluster's offset) to cx
+    add ax, cx
+
     call set_lba_address
+
+    pop bx ; restore original bx (with 2-based indexing)
 
     mov ax, KERNEL_ADDRESS
     add ax, [data_offset]

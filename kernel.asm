@@ -24,7 +24,6 @@ init_daps:
 
 
 print_root_directory:
-    call read_root_directory
     mov si, ROOTDIR_ADDRESS
 
     jc print_root_directory__error
@@ -109,24 +108,6 @@ print_directory_entry:
         pop bx
         pop ax
         ret
-
-
-
-read_root_directory:
-    call first_rootdir_sector ; ax = starting sector of root directory
-    call set_lba_address
-
-    call sectors_per_rootdir ; ax = # sectors per root directory
-    mov [daps+2], ax
-
-    mov ax, ROOTDIR_ADDRESS
-    call set_transfer_buffer
-    call read_disk_lba
-
-    mov si, ROOTDIR_ADDRESS
-
-    ret
-
 
 
 itos:

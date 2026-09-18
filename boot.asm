@@ -71,9 +71,7 @@ is_kernel:
         jmp is_kernel__compare_char
     
     is_kernel__found:
-        pop si
-        mov bx, [si+26]
-        push si
+        mov bx, [si+26-6]  ; cluster no is located at byte 26 from beginning, but we already skipped 6 bytes
 
     is_kernel__finish:
         pop si
@@ -118,8 +116,9 @@ read_fat:
 
 
 load_kernel:
-    ; set number of sectors to transfer
-    mov ax, 1
+    ; set number of sectors to transfer to equal cluster size (in sectors)
+    xor ax, ax
+    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
     mov [daps+2], ax
 
     load_kernel__loop:
@@ -155,8 +154,13 @@ load_kernel:
     call read_disk_lba
     jc some_error
 
-    mov ax, [data_offset]
-    add ax, 512
+    ; increment data_offset (location of next cluster in RAM) by cluster_size * logical_sector_size
+    mov ax, [0x7c00+0x00B] ; bytes per logical sector
+    mov cx, [0x7c00+0x00D] ; logical sectors per cluster
+    mul cx
+
+    mov cx, [data_offset]
+    add ax, cx
     mov [data_offset], ax
 
     call get_next_cluster_num ; bx = next cluster number

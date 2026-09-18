@@ -40,9 +40,6 @@ get_next_cluster_num:
 
     pop dx
 
-    xor ax, ax
-    xor bx, bx
-
     cmp dl, 0
     jne get_next_cluster_num__odd
 

@@ -157,7 +157,8 @@ load_kernel:
     ; ax = (bx - 2) * cluster size
     dec bx
     dec bx
-    mov ax, [0x7c00+0x00D] ; number of logical sectors per cluster
+    xor ax, ax
+    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
     mul bx                 ; ax = offset of cluster's first sector
 
     push ax
@@ -278,12 +279,39 @@ set_transfer_buffer:
     ret
 
 
+
+
 set_lba_address:
-    ; set LBA address of sector to read
-    mov dword [daps+12], 0 ; set field to zero
-    mov dword [daps+8], 0  ; set field to zero
-    mov [daps+8], ax
-    ret
+    ; convert logical sector to physical LBA address and store it in the DAPS structure
+
+    push ax
+    ; convert logical sector to physical
+    mov ah, 48h                   ; Get Drive Parameters
+    mov dl, [boot_drive]          ; Drive index
+    mov si, DISK_BUFFER_ADDRESS   ; response data structure address
+    int 13h
+
+    jc set_lba_address__fallback
+    mov cx, [DISK_BUFFER_ADDRESS + 18] ; bytes per physical sector
+    jmp set_lba_address__finish
+
+    set_lba_address__fallback:
+        mov cx, 512
+
+    set_lba_address__finish:
+        xor dx, dx
+        mov ax, [0x7c00+0x00B] ; bytes per logical sector
+        div cx
+
+        ; ax = logical sector * logical sector size
+        mov cx, ax
+        pop ax  ; restore logical sector address
+        mul cx
+
+        mov dword [daps+12], 0 ; set field to zero
+        mov dword [daps+8], 0  ; set field to zero
+        mov [daps+8], ax
+        ret
 
 
 read_disk_lba:

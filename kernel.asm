@@ -24,7 +24,7 @@ BUFFER_SIZE equ 120
     call print_loop
 
     pop si
-    call cariage_return
+    call carriage_return
 %endmacro
 
 mov [boot_drive], dl
@@ -43,7 +43,7 @@ main:
     call getline
     mov si, buffer
     call print_loop
-    call cariage_return
+    call carriage_return
 
     jmp main
 
@@ -180,15 +180,17 @@ getline:
         stosb
 
         ; show character
+        xor bx, bx
         mov ah, 0x0E
         int 0x10
 
+        inc cx
         jmp getline__handle_char
 
     getline__finish:
         mov al, 0
         stosb
-        call new_line
+        call carriage_return
         pop di
         pop si
         pop dx
@@ -298,7 +300,7 @@ clear_buffer:
         ret
 
 
-cariage_return:
+carriage_return:
     mov al, 0x0D
     call print_char
     mov al, 0x0A
@@ -307,6 +309,7 @@ cariage_return:
 
 
 print_char:
+    xor bx, bx
     mov ah, 0x0E
     int 0x10
     ret

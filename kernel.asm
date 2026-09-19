@@ -41,14 +41,91 @@ main:
 
     ; get user command from keyboard
     call getline
-    mov si, buffer
-    call print_loop
+    call run_command
+
     call carriage_return
 
     jmp main
 
 
 jmp hang
+
+
+run_command:
+    mov di, buffer
+
+    mov si, cmd_echo
+    call starts_with
+    jz run_command__echo
+
+    jnz run_command__notfound
+
+    run_command__echo:
+        mov si, buffer
+        add si, 4 ; print everything in the buffer past "echo"
+        jmp run_command__finish
+    
+    run_command__notfound:
+        mov si, cmd_notfound
+
+    run_command__finish:
+        call print_loop
+        ret
+
+
+starts_with:
+    ; sets ZF if the string b (pointed to by di) starts with string a (pointed to by si)
+    push si
+    push di
+
+    mov al, [si]
+    or al, al
+    jnz starts_with__iter
+
+    ; if first byte is zero -> clear ZF (doesn't start with other string)
+    jmp starts_with__null
+
+    starts_with__iter:
+        lodsb
+
+        or al, al            ; if it's the end of strings, this sets ZF to 1
+        jz starts_with__finish
+
+        scasb
+        jne starts_with__finish ; if characters are not equal, this sets ZF to 0
+
+        jmp starts_with__iter
+
+    starts_with__differ:
+        or al, 1
+
+    starts_with__null:
+        or al, 1 ; forces to set ZF flag to 0
+
+    starts_with__finish:
+        pop di
+        pop si
+        ret
+
+
+compare_strings:
+    push si
+    push di
+
+    compare_strings__iter:
+        lodsb
+        scasb
+        jne compare_strings__finish
+
+        or al, al            ; detect the end of strings
+        jz compare_strings__finish
+
+        jmp compare_strings__iter
+
+    compare_strings__finish:
+        pop di
+        pop si
+        ret
 
 
 print_bpb:
@@ -337,5 +414,8 @@ lbl_total_sectors:            db "Total logical sectors:       ", 0
 lbl_media:                    db "Media descriptor (Hex):      ", 0
 lbl_fat_size:                 db "Logical sectors per FAT:     ", 0
 
-data_offset: dw 0
 
+cmd_notfound db "Command not found", 0x0D, 0x0A, 0
+
+; supported commands
+cmd_echo db "echo", 0

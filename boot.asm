@@ -22,7 +22,7 @@ main:
     call read_fat
     call get_kernel_first_cluster
 
-    call load_kernel
+    call load_file
     mov dl, [boot_drive]
     jmp KERNEL_ADDRESS
 
@@ -115,78 +115,10 @@ read_fat:
     ret
 
 
-load_kernel:
-    ; set number of sectors to transfer to equal cluster size (in sectors)
-    xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
-    mov [daps+2], ax
-
-    load_kernel__loop:
-
-    push bx
-    
-    ; ax = (bx - 2) * cluster size
-    dec bx
-    dec bx
-    xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
-    mul bx                 ; ax = offset of cluster's first sector
-
-    push ax
-
-    ; ax = first_rootdir_sector + sectors_per_rootdir
-    call first_rootdir_sector ; -> ax
-    mov cx, ax
-    call sectors_per_rootdir ; -> ax
-    add ax, cx
-
-    pop cx ; restore ax (cluster's offset) to cx
-    add ax, cx
-
-    call set_lba_address
-
-    pop bx ; restore original bx (with 2-based indexing)
-
-    mov ax, KERNEL_ADDRESS
-    add ax, [data_offset]
-    call set_transfer_buffer
-
-    call read_disk_lba
-    jc some_error
-
-    ; increment data_offset (location of next cluster in RAM) by cluster_size * logical_sector_size
-    mov ax, [0x7c00+0x00B] ; bytes per logical sector
-    mov cx, [0x7c00+0x00D] ; logical sectors per cluster
-    mul cx
-
-    mov cx, [data_offset]
-    add ax, cx
-    mov [data_offset], ax
-
-    call get_next_cluster_num ; bx = next cluster number
-
-    cmp bx, 0xfff
-    je load_kernel__finish
-    cmp bx, 0xff0f
-
-    je load_kernel__finish
-    jmp load_kernel__loop
-
-    some_error:
-        mov si, error
-        call print_loop
-
-    load_kernel__finish:
-        ret
-
 
 %include "util.inc"
 
-
 file_name db "KERNEL", 0, 0
-error db "HDE", 0
-
-data_offset: dw 0
 
 ; pad remaining part of sector with 0 and add the signature at the end
 times 510-($-$$) db 0

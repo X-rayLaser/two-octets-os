@@ -59,6 +59,70 @@ get_next_cluster_num:
         ret
 
 
+load_file:
+    ; set number of sectors to transfer to equal cluster size (in sectors)
+    xor ax, ax
+    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mov [daps+2], ax
+
+    load_file__loop:
+
+    push bx
+    
+    ; ax = (bx - 2) * cluster size
+    dec bx
+    dec bx
+    xor ax, ax
+    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mul bx                 ; ax = offset of cluster's first sector
+
+    push ax
+
+    ; ax = first_rootdir_sector + sectors_per_rootdir
+    call first_rootdir_sector ; -> ax
+    mov cx, ax
+    call sectors_per_rootdir ; -> ax
+    add ax, cx
+
+    pop cx ; restore ax (cluster's offset) to cx
+    add ax, cx
+
+    call set_lba_address
+
+    pop bx ; restore original bx (with 2-based indexing)
+
+    mov ax, [data_offset]
+    call set_transfer_buffer
+
+    call read_disk_lba
+    jc some_error
+
+    ; increment data_offset (location of next cluster in RAM) by cluster_size * logical_sector_size
+    mov ax, [0x7c00+0x00B] ; bytes per logical sector
+    mov cx, [0x7c00+0x00D] ; logical sectors per cluster
+    mul cx
+
+    mov cx, [data_offset]
+    add ax, cx
+    mov [data_offset], ax
+
+    call get_next_cluster_num ; bx = next cluster number
+
+    cmp bx, 0xfff
+    je load_file__finish
+    cmp bx, 0xff0f
+
+    je load_file__finish
+    jmp load_file__loop
+
+    some_error:
+        mov si, error
+        call print_loop
+
+    load_file__finish:
+        ret
+
+
 init_daps:
     ; set packet size to 16 bytes
     mov al, 16
@@ -165,4 +229,7 @@ boot_drive: db 0
 ; Disk Address Packet Structure
 align 4
 daps times 16 db 0
+error db "HDE", 0
+
+data_offset: dw KERNEL_ADDRESS
 %endif

@@ -119,6 +119,10 @@ load_directory:
 
         mov bx, [si+26] ; get first sector of subdirectory
 
+        mov cx, [directory_buffer]
+        mov [data_offset], cx
+        call load_file
+
     load_directory__finish:
         ret
 
@@ -474,7 +478,7 @@ hang:
     jmp hang
 
 buffer times BUFFER_SIZE+1 db 0
-directory_buffer times 2048 ; buffer for storing up to 64 entries
+directory_buffer times 2048 db 0 ; buffer for storing up to 64 entries
 
 prompt db "$ ", 0
 msg_hello db "Hello from kernel, indeed!", 0x0D, 0x0A, 0

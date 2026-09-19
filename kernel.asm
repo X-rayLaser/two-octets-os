@@ -31,6 +31,8 @@ mov [boot_drive], dl
 call init_daps
 
 call print_bpb
+mov si, root_directory
+call print_loop
 call print_root_directory
 
 ; main loop
@@ -58,18 +60,91 @@ run_command:
     call starts_with
     jz run_command__echo
 
+    mov si, cmd_cat
+    call starts_with
+    jz run_command__cat
+
     jnz run_command__notfound
 
     run_command__echo:
         mov si, buffer
         add si, 4 ; print everything in the buffer past "echo"
         jmp run_command__finish
-    
+
+    run_command__cat:
+        call run_cat
+        jmp run_command__finish
+
     run_command__notfound:
         mov si, cmd_notfound
 
     run_command__finish:
         call print_loop
+        ret
+
+
+run_cat:
+    add si, 4
+    ret
+
+
+load_directory:
+    ; copies directory data into directory_buffer on success and sets ZF
+
+    mov di, buffer
+    call parse_path_segment
+    
+    mov si, ROOTDIR_ADDRESS
+
+    load_directory__loop:
+        mov al, [si]
+        or al, al
+        jz load_directory__notfound
+
+        call check_directory_entry
+        jz load_directory__found; check if entry found
+
+        add si, 32 ; go to the next entry
+        jmp load_directory__loop
+    
+    load_directory__notfound:
+        or al, 1 ; clear ZF
+        jmp load_directory__finish
+
+    load_directory__found:
+        ; check wheither it's a directory rather than file
+        mov al, [si+11]
+        cmp al, 0x10
+        jne load_directory__finish ; if it's not directory, set ZF to 0 and quit
+
+        mov bx, [si+26] ; get first sector of subdirectory
+
+    load_directory__finish:
+        ret
+
+
+check_directory_entry:
+
+
+
+parse_path_segment:
+    ; copy the next path segment from source string to destination string
+    ; source string starts with /
+    ; si points at the next segment after this call finishes
+
+    push di
+    inc si ; trim / at the beginning
+
+    parse_path_segment__loop:
+        lodsb
+        cmp al, '/'
+        je parse_path_segment__finish
+
+        stosb
+        jmp parse_path_segment__loop
+
+    parse_path_segment__finish:
+        pop di
         ret
 
 
@@ -88,11 +163,11 @@ starts_with:
     starts_with__iter:
         lodsb
 
-        or al, al            ; if it's the end of strings, this sets ZF to 1
+        or al, al            ; if it's the end of string, set ZF
         jz starts_with__finish
 
         scasb
-        jne starts_with__finish ; if characters are not equal, this sets ZF to 0
+        jne starts_with__finish ; if characters are not equal, clear ZF
 
         jmp starts_with__iter
 
@@ -145,32 +220,32 @@ print_bpb:
 
 print_root_directory:
     mov si, ROOTDIR_ADDRESS
+    call print_directory
 
-    jc print_root_directory__error
+
+print_directory:
+    jc print_directory__error
     push si
-    mov si, root_directory
-    call print_loop
-    pop si
 
-    print_root_directory__print_entry:
+    print_directory__print_entry:
         mov al, [si]
         cmp al, 0
-        je print_root_directory__finish
+        je print_directory__finish
 
         call print_directory_entry
         add si, 32  ; go to the next entry
 
-        jmp print_root_directory__print_entry
+        jmp print_directory__print_entry
 
 
-    jmp print_root_directory__finish
+    jmp print_directory__finish
 
-    print_root_directory__error:
+    print_directory__error:
         ; hadle error
         mov si, msg_disk_error
         call print_loop
 
-    print_root_directory__finish:
+    print_directory__finish:
         ret
 
 
@@ -399,6 +474,8 @@ hang:
     jmp hang
 
 buffer times BUFFER_SIZE+1 db 0
+directory_buffer times 2048 ; buffer for storing up to 64 entries
+
 prompt db "$ ", 0
 msg_hello db "Hello from kernel, indeed!", 0x0D, 0x0A, 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
@@ -418,4 +495,5 @@ lbl_fat_size:                 db "Logical sectors per FAT:     ", 0
 cmd_notfound db "Command not found", 0x0D, 0x0A, 0
 
 ; supported commands
-cmd_echo db "echo", 0
+cmd_echo db "echo ", 0
+cmd_cat  db "cat ", 0

@@ -1,6 +1,8 @@
 [org 0x7e00]
 bits 16
 
+BUFFER_SIZE equ 120
+
 %macro print_bpb_field 2
     push si
     mov si, %1
@@ -30,6 +32,21 @@ call init_daps
 
 call print_bpb
 call print_root_directory
+
+; main loop
+main:
+    ; show prompt
+    mov si, prompt
+    call print_loop
+
+    ; get user command from keyboard
+    call getline
+    mov si, buffer
+    call print_loop
+    call cariage_return
+
+    jmp main
+
 
 jmp hang
 
@@ -135,6 +152,71 @@ print_directory_entry:
         ret
 
 
+getline:
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+
+    mov di, buffer
+    call clear_buffer
+    mov di, buffer
+
+    mov cx, 0
+
+    getline__handle_char:
+        cmp cx, BUFFER_SIZE
+        jge getline__finish
+
+        ; get character
+        mov ah, 0x00
+        int 0x16
+
+        cmp al, 13  ; check if user pressed 'Enter'
+        je getline__finish
+
+        stosb
+
+        ; show character
+        mov ah, 0x0E
+        int 0x10
+
+        jmp getline__handle_char
+
+    getline__finish:
+        mov al, 0
+        stosb
+        call new_line
+        pop di
+        pop si
+        pop dx
+        pop cx
+        pop bx
+        pop ax
+        ret
+
+
+new_line:
+    ; get and save curent cursor row and col into dh:dl
+    mov bx, 0
+    mov ah, 0x03
+    int 0x10
+
+    ; go to next row
+
+    inc dh
+    mov dl, 0
+
+    ; set updated cursor position
+    mov bx, 0
+    mov ah, 0x02
+    int 0x10
+
+    ret
+
+
 itos:
     push ax
     push bx
@@ -197,7 +279,7 @@ clear_buffer:
     push bx
     push di
 
-    mov cx, 30
+    mov cx, BUFFER_SIZE
 
     clear_buffer__loop:
         cmp cx, 0
@@ -236,7 +318,8 @@ print_char:
 hang:
     jmp hang
 
-buffer times 30 db 0
+buffer times BUFFER_SIZE+1 db 0
+prompt db "$ ", 0
 msg_hello db "Hello from kernel, indeed!", 0x0D, 0x0A, 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
 root_directory db "Root directory:", 0x0D, 0x0A, 0

@@ -1,36 +1,14 @@
 [org 0x7e00]
 bits 16
 
-%macro print_word_field 1
-    push si
-    mov si, %1
-    call print_loop
-    pop si
-    lodsw
-    
-    push si
-
-    push ax
-    mov di, buffer
-    call clear_buffer
-
-    pop ax
-    call itos
-    mov si, buffer
-    call print_loop
-
-    pop si
-    call cariage_return
-%endmacro
-
-%macro print_byte_field 1
+%macro print_bpb_field 2
     push si
     mov si, %1
     call print_loop
     pop si
 
     xor ax, ax
-    lodsb
+    %2
     
     push si
 
@@ -59,14 +37,14 @@ jmp hang
 print_bpb:
     mov si, 0x7c00+0x00B
 
-    print_word_field lbl_bps
-    print_byte_field lbl_spc
-    print_word_field lbl_res_sec
-    print_byte_field lbl_fats
-    print_word_field lbl_root_ent
-    print_word_field lbl_tot_sec
-    print_byte_field lbl_media
-    print_byte_field lbl_fat_sz
+    print_bpb_field lbl_bytes_per_sector, lodsw
+    print_bpb_field lbl_sectors_per_cluster, lodsb
+    print_bpb_field lbl_reserved_sectors, lodsw
+    print_bpb_field lbl_fats, lodsb
+    print_bpb_field lbl_root_entries, lodsw
+    print_bpb_field lbl_total_sectors, lodsw
+    print_bpb_field lbl_media, lodsb
+    print_bpb_field lbl_fat_size, lodsw
     
     ret
 
@@ -264,14 +242,14 @@ msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
 root_directory db "Root directory:", 0x0D, 0x0A, 0
 
 ; DOS 2.0 BPB Labels (FAT-12)
-lbl_bps:      db "Bytes per logical sector:    ", 0
-lbl_spc:      db "Logical sectors per cluster: ", 0
-lbl_res_sec:  db "Reserved logical sectors:    ", 0
-lbl_fats:     db "Number of FATs:              ", 0
-lbl_root_ent: db "Root directory entries:      ", 0
-lbl_tot_sec:  db "Total logical sectors:       ", 0
-lbl_media:    db "Media descriptor (Hex):      ", 0
-lbl_fat_sz:   db "Logical sectors per FAT:     ", 0
+lbl_bytes_per_sector:         db "Bytes per logical sector:    ", 0
+lbl_sectors_per_cluster:      db "Logical sectors per cluster: ", 0
+lbl_reserved_sectors:         db "Reserved logical sectors:    ", 0
+lbl_fats:                     db "Number of FATs:              ", 0
+lbl_root_entries:             db "Root directory entries:      ", 0
+lbl_total_sectors:            db "Total logical sectors:       ", 0
+lbl_media:                    db "Media descriptor (Hex):      ", 0
+lbl_fat_size:                 db "Logical sectors per FAT:     ", 0
 
 data_offset: dw 0
 

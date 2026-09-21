@@ -87,6 +87,7 @@ run_command:
     run_command__echo:
         mov si, buffer
         add si, 4 ; print everything in the buffer past "echo"
+        call print_loop
         jmp run_command__finish
 
     run_command__cat:
@@ -94,26 +95,38 @@ run_command:
         jmp run_command__finish
 
     run_command__ls:
+        mov si, buffer
         add si, 3
 
         mov di, path_buffer
         mov cx, 256
         call copy_nbytes
-
+        
         mov si, path_buffer
+
         call split_path
 
+        push bx
+        add si, bx
         call print_loop
-        mov si, di
+        
+        call carriage_return
+
+        mov si, path_buffer
+        pop bx
+        add si, bx
+        mov al, 0
+        mov [si], al
+        mov si, path_buffer
         call print_loop
 
         jmp run_command__finish
 
     run_command__notfound:
         mov si, cmd_notfound
+        call print_loop
 
     run_command__finish:
-        call print_loop
         ret
 
 
@@ -239,16 +252,18 @@ split_path:
 
     inc si
 
+    mov bx, si
+
     split_path__loop:
         mov al, [si]
         or al, al
         jz split_path__finish
 
+        mov bx, si ; save address
         call parse_path_segment
         jmp split_path__loop
 
     split_path__finish:
-        mov bx, si 
         pop si
         sub bx, si
 
@@ -322,7 +337,7 @@ ensure_trailing_slash:
         jz ensure_trailing_slash__string_end
 
         inc si
-        jmp ensure_trailing_slash
+        jmp ensure_trailing_slash__loop
 
     ensure_trailing_slash__string_end:
         mov al, [si-1]
@@ -331,6 +346,9 @@ ensure_trailing_slash:
 
     ensure_trailing_slash__add_slash:
         mov al, '/'
+        mov [si], al
+        inc si
+        mov al, 0
         mov [si], al
 
     ensure_trailing_slash__finish:

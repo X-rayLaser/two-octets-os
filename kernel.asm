@@ -3,6 +3,20 @@ bits 16
 
 BUFFER_SIZE equ 120
 
+%macro push_abcd 0
+    push ax
+    push bx
+    push cx
+    push dx
+%endmacro
+
+%macro pop_dcba 0
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+%endmacro
+
 %macro print_bpb_field 2
     push si
     mov si, %1
@@ -64,6 +78,10 @@ run_command:
     call starts_with
     jz run_command__cat
 
+    mov si, cmd_ls
+    call starts_with
+    jz run_command__ls
+
     jnz run_command__notfound
 
     run_command__echo:
@@ -73,6 +91,22 @@ run_command:
 
     run_command__cat:
         call run_cat
+        jmp run_command__finish
+
+    run_command__ls:
+        add si, 3
+
+        mov di, path_buffer
+        mov cx, 256
+        call copy_nbytes
+
+        mov si, path_buffer
+        call split_path
+
+        call print_loop
+        mov si, di
+        call print_loop
+
         jmp run_command__finish
 
     run_command__notfound:
@@ -92,7 +126,8 @@ load_directory:
     ; copies directory data into directory_buffer and sets ZF on success
     ; si points to the directory path with leading /
 
-    mov [directory_buffer_ptr], ROOTDIR_ADDRESS
+    mov di, ROOTDIR_ADDRESS
+    mov [directory_buffer_ptr], di
 
     call ensure_trailing_slash
 
@@ -173,8 +208,9 @@ load_next_dir:
         mov bx, [si+26] ; get first sector of subdirectory
 
         ; load directory to be at directory_buffer address
-        mov [data_offset], directory_buffer
-        mov [directory_buffer_ptr], directory_buffer
+        mov di, directory_buffer
+        mov [data_offset], di
+        mov [directory_buffer_ptr], di
         call load_file
 
         xor al, al ; force setting ZF
@@ -235,10 +271,11 @@ check_directory_entry:
     call copy_nbytes
 
     mov si, buffer
-    mov [si+8], 0 ; add a trailing 0
+    mov ax, 0
+    mov [si+8], ax ; add a trailing 0
 
     pop di
-    compare_strings
+    call compare_strings
 
     pop si
     pop_dcba
@@ -293,7 +330,8 @@ ensure_trailing_slash:
         je ensure_trailing_slash__finish
 
     ensure_trailing_slash__add_slash:
-        mov [si], '/'
+        mov al, '/'
+        mov [si], al
 
     ensure_trailing_slash__finish:
         pop si
@@ -652,6 +690,7 @@ hang:
 buffer times BUFFER_SIZE+1 db 0
 directory_buffer_ptr dw 0
 directory_buffer times 2048 db 0 ; buffer for storing up to 64 entries
+path_buffer times 256 db 0 ; buffer for storing file path
 
 prompt db "$ ", 0
 msg_hello db "Hello from kernel, indeed!", 0x0D, 0x0A, 0
@@ -674,3 +713,4 @@ cmd_notfound db "Command not found", 0x0D, 0x0A, 0
 ; supported commands
 cmd_echo db "echo ", 0
 cmd_cat  db "cat ", 0
+cmd_ls   db "ls ", 0

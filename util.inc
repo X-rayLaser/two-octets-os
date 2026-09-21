@@ -8,21 +8,6 @@ DISK_BUFFER_ADDRESS equ 0x6500 ; remaining address space for storing temp data f
 KERNEL_ADDRESS equ 0x7e00      ; loaded kernel will reside in memory directly after bootloader
 
 
-%macro push_abcd 0
-    push ax
-    push bx
-    push cx
-    push dx
-%endmacro
-
-%macro pop_dcba 0
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-%endmacro
-
-
 get_next_cluster_num:
     ; FAT row number: ax = bx // 2; dl = bx % 2
     xor dx, dx

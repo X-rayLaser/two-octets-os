@@ -89,65 +89,153 @@ run_cat:
 
 
 load_directory:
-    ; copies directory data into directory_buffer on success and sets ZF
+    ; copies directory data into directory_buffer and sets ZF on success
+    ; si points to the directory path with leading /
 
-    mov di, buffer
-    call parse_path_segment
-    
-    mov si, ROOTDIR_ADDRESS
+    mov [directory_buffer_ptr], ROOTDIR_ADDRESS
 
-    load_directory__loop:
+    ; special case: illegal path without leading /
+    mov al, [si]
+    cmp al, '/'
+    jne load_directory__notfound
+
+    ; special case: directory path is just /
+    mov al, [si+1]
+    or al, al
+    jz load_next_dir__finish
+
+    inc si ; skip leading '/'
+
+    load_directory__outer_loop:
+        ; end of path: 0 after trailing /
         mov al, [si]
         or al, al
-        jz load_directory__notfound
+        jz load_next_dir__finish
 
-        call check_directory_entry
-        jz load_directory__found; check if entry found
+        ; todo: function to force path end with slash
+        ; end of path: 0 without trailing /
+        mov al, [si-1]
+        or al, al
+        jz load_next_dir__finish
 
-        add si, 32 ; go to the next entry
-        jmp load_directory__loop
+        mov di, buffer
     
+        call parse_path_segment ; next subdirectory name -> buffer
+        mov di, buffer ; target sub directory name to load
+
+        ; sanity check: buffer must not start with 0
+        mov al, [di]
+        or al, al
+        jz load_next_dir__notfound
+
+        call load_next_dir
+        jnz load_directory__notfound
+
+        jmp load_directory__outer_loop
+
     load_directory__notfound:
         or al, 1 ; clear ZF
         jmp load_directory__finish
-
-    load_directory__found:
-        ; check wheither it's a directory rather than file
-        mov al, [si+11]
-        cmp al, 0x10
-        jne load_directory__finish ; if it's not directory, set ZF to 0 and quit
-
-        mov bx, [si+26] ; get first sector of subdirectory
-
-        mov cx, [directory_buffer]
-        mov [data_offset], cx
-        call load_file
 
     load_directory__finish:
         ret
 
 
-check_directory_entry:
+load_next_dir:
+    ; given a current directory pointed by directory_buffer_ptr, find and load a target subdirectory pointed by di
+    ; set ZF on success
+    ; set si address to memory of loaded directory
+    push_abcd
+    push si
+    push di
 
+    mov si, [directory_buffer_ptr]
+
+    load_next_dir__loop:
+        mov al, [si]
+        or al, al
+        jz load_next_dir__notfound
+
+        call check_directory_entry
+        jz load_next_dir__found; check if entry found
+
+        load_next_dir__next_entry:
+            add si, 32 ; go to the next entry
+            jmp load_next_dir__loop
+    
+    load_next_dir__notfound:
+        or al, 1 ; clear ZF
+        jmp load_directory__finish
+
+    load_next_dir__found:
+        ; check wheither it's a directory rather than file
+        mov al, [si+11]
+        cmp al, 0x10
+        jne load_next_dir__next_entry ; if it's not directory, go back to loop
+
+        mov bx, [si+26] ; get first sector of subdirectory
+
+        ; load directory to be at directory_buffer address
+        mov [data_offset], directory_buffer
+        mov [directory_buffer_ptr], directory_buffer
+        call load_file
+
+        xor al, al ; force setting ZF
+
+    load_next_dir__finish:
+        pop di
+        push si
+        pop_dcba
+        ret
+
+
+split_path:
+    ; split path into parent directory path and remaining segment (filename/directory)
+
+
+check_directory_entry:
+    ; sets ZF if current directory entry pointed by si contains subdirectory pointed by di
+    push_abcd
+    push si
+    push di
+
+    mov di, buffer
+    mov cx, 8 ; ignore last 3 extension bytes
+    call copy_nbytes
+
+    mov si, buffer
+    mov [si+8], 0 ; add a trailing 0
+
+    pop di
+    compare_strings
+
+    pop si
+    pop_dcba
+    ret
 
 
 parse_path_segment:
-    ; copy the next path segment from source string to destination string
-    ; source string starts with /
+    ; copy the next path segment from source string (si) to destination string (di)
     ; si points at the next segment after this call finishes
 
     push di
-    inc si ; trim / at the beginning
 
     parse_path_segment__loop:
         lodsb
         cmp al, '/'
         je parse_path_segment__finish
 
+        or al, al
+        jz parse_path_segment__finish
+
         stosb
         jmp parse_path_segment__loop
 
     parse_path_segment__finish:
+        ; always add a trailing 0
+        xor al, al
+        stosb
+
         pop di
         ret
 
@@ -184,6 +272,30 @@ starts_with:
     starts_with__finish:
         pop di
         pop si
+        ret
+
+
+copy_nbytes:
+    ; copy up to cx bytes from source string (si) to destination string (di)
+
+    push_abcd
+    push si
+    push di
+
+    copy_string__loop:
+        cmp cx, 0
+        jle copy_string__finish
+
+        lodsb
+        stosb
+
+        dec cx
+        jmp copy_string__loop
+
+    copy_string__finish:
+        pop di
+        pop si
+        pop_dcba
         ret
 
 
@@ -478,6 +590,7 @@ hang:
     jmp hang
 
 buffer times BUFFER_SIZE+1 db 0
+directory_buffer_ptr dw 0
 directory_buffer times 2048 db 0 ; buffer for storing up to 64 entries
 
 prompt db "$ ", 0

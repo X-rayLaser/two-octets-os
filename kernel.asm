@@ -460,6 +460,7 @@ print_directory:
         call print_loop
 
     print_directory__finish:
+        pop si
         ret
 
 

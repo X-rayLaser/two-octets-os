@@ -94,6 +94,8 @@ load_directory:
 
     mov [directory_buffer_ptr], ROOTDIR_ADDRESS
 
+    call ensure_trailing_slash
+
     ; special case: illegal path without leading /
     mov al, [si]
     cmp al, '/'
@@ -112,13 +114,8 @@ load_directory:
         or al, al
         jz load_next_dir__finish
 
-        ; todo: function to force path end with slash
-        ; end of path: 0 without trailing /
-        mov al, [si-1]
-        or al, al
-        jz load_next_dir__finish
-
         mov di, buffer
+        call clear_buffer
     
         call parse_path_segment ; next subdirectory name -> buffer
         mov di, buffer ; target sub directory name to load
@@ -190,7 +187,40 @@ load_next_dir:
 
 
 split_path:
-    ; split path into parent directory path and remaining segment (filename/directory)
+    ; split path into parent directory path (si) and remaining segment (filename/directory)
+    ; stores start position of remaining segment in bx
+
+    push ax
+    push cx
+    push dx
+    push di
+
+    push si
+    call ensure_trailing_slash
+
+    mov di, buffer
+    call clear_buffer
+
+    inc si
+
+    split_path__loop:
+        mov al, [si]
+        or al, al
+        jz split_path__finish
+
+        call parse_path_segment
+        jmp split_path__loop
+
+    split_path__finish:
+        mov bx, si 
+        pop si
+        sub bx, si
+
+        pop di
+        pop dx
+        pop cx
+        pop ax
+        ret
 
 
 check_directory_entry:
@@ -200,6 +230,7 @@ check_directory_entry:
     push di
 
     mov di, buffer
+    call clear_buffer
     mov cx, 8 ; ignore last 3 extension bytes
     call copy_nbytes
 
@@ -237,6 +268,35 @@ parse_path_segment:
         stosb
 
         pop di
+        ret
+
+
+ensure_trailing_slash:
+    push si
+
+    mov al, [si]
+    or al, al
+    jz ensure_trailing_slash__add_slash
+
+    ensure_trailing_slash__loop:
+        mov al, [si]
+
+        or al, al
+        jz ensure_trailing_slash__string_end
+
+        inc si
+        jmp ensure_trailing_slash
+
+    ensure_trailing_slash__string_end:
+        mov al, [si-1]
+        cmp al, '/'
+        je ensure_trailing_slash__finish
+
+    ensure_trailing_slash__add_slash:
+        mov [si], '/'
+
+    ensure_trailing_slash__finish:
+        pop si
         ret
 
 

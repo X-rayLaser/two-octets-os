@@ -98,27 +98,14 @@ run_command:
         mov si, buffer
         add si, 3
 
-        mov di, path_buffer
-        mov cx, 256
-        call copy_nbytes
-        
-        mov si, path_buffer
+        mov si, ROOTDIR_ADDRESS
 
-        call split_path
+        mov [directory_buffer_ptr], si
 
-        push bx
-        add si, bx
-        call print_loop
-        
-        call carriage_return
-
-        mov si, path_buffer
-        pop bx
-        add si, bx
-        mov al, 0
-        mov [si], al
-        mov si, path_buffer
-        call print_loop
+        mov di, test_directory_name
+        call load_next_dir
+        mov si, [directory_buffer_ptr]
+        call print_directory
 
         jmp run_command__finish
 
@@ -152,7 +139,7 @@ load_directory:
     ; special case: directory path is just /
     mov al, [si+1]
     or al, al
-    jz load_next_dir__finish
+    jz load_directory__finish
 
     inc si ; skip leading '/'
 
@@ -160,7 +147,7 @@ load_directory:
         ; end of path: 0 after trailing /
         mov al, [si]
         or al, al
-        jz load_next_dir__finish
+        jz load_directory__finish
 
         mov di, buffer
         call clear_buffer
@@ -171,7 +158,7 @@ load_directory:
         ; sanity check: buffer must not start with 0
         mov al, [di]
         or al, al
-        jz load_next_dir__notfound
+        jz load_directory__notfound
 
         call load_next_dir
         jnz load_directory__notfound
@@ -210,7 +197,7 @@ load_next_dir:
     
     load_next_dir__notfound:
         or al, 1 ; clear ZF
-        jmp load_directory__finish
+        jmp load_next_dir__finish
 
     load_next_dir__found:
         ; check wheither it's a directory rather than file
@@ -230,7 +217,7 @@ load_next_dir:
 
     load_next_dir__finish:
         pop di
-        push si
+        pop si
         pop_dcba
         ret
 
@@ -278,18 +265,15 @@ check_directory_entry:
     ; sets ZF if current directory entry pointed by si contains subdirectory pointed by di
     push_abcd
     push si
-    push di
 
-    mov di, buffer
-    call clear_buffer
-    mov cx, 8 ; ignore last 3 extension bytes
-    call copy_nbytes
+    ;mov cx, 8 ; ignore last 3 extension bytes
+    ;call copy_nbytes
 
-    mov si, buffer
-    mov ax, 0
-    mov [si+8], ax ; add a trailing 0
+    ;mov ax, 0
+    ;mov [si+8], ax ; add a trailing 0
 
-    pop di
+    ;pop di
+    mov cx, 11
     call compare_strings
 
     pop si
@@ -416,10 +400,14 @@ copy_nbytes:
 
 
 compare_strings:
+    ; compare up to cx first characters
+    push cx
     push si
     push di
 
     compare_strings__iter:
+        or cx, cx
+        jz compare_strings__finish
         lodsb
         scasb
         jne compare_strings__finish
@@ -427,11 +415,13 @@ compare_strings:
         or al, al            ; detect the end of strings
         jz compare_strings__finish
 
+        dec cx
         jmp compare_strings__iter
 
     compare_strings__finish:
         pop di
         pop si
+        pop cx
         ret
 
 
@@ -711,6 +701,7 @@ directory_buffer_ptr dw 0
 directory_buffer times 2048 db 0 ; buffer for storing up to 64 entries
 path_buffer times 256 db 0 ; buffer for storing file path
 
+test_directory_name db "FILES      ", 0
 prompt db "$ ", 0
 msg_hello db "Hello from kernel, indeed!", 0x0D, 0x0A, 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0

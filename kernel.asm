@@ -95,21 +95,7 @@ run_command:
         jmp run_command__finish
 
     run_command__ls:
-        mov si, buffer
-        add si, 3
-
-        mov di, path_buffer
-        mov cx, 256
-        call copy_nbytes
-
-        mov si, di
-
-        call to_upper_case
-
-        call load_directory
-        mov si, [directory_buffer_ptr]
-        call print_directory
-
+        call run_ls
         jmp run_command__finish
 
     run_command__notfound:
@@ -123,6 +109,95 @@ run_command:
 run_cat:
     add si, 4
     ret
+
+
+run_ls:
+    mov si, buffer
+    add si, 3
+
+    mov di, path_buffer
+    mov cx, 256
+    call copy_nbytes
+
+    mov si, di
+
+    call to_upper_case
+
+    call load_directory
+    jnz run_ls__maybe_file ; if it fails, the path may refer to a file rather than a directory
+
+    mov si, [directory_buffer_ptr]
+    call print_directory
+    jmp run_ls__finish
+
+    run_ls__maybe_file:
+        mov si, path_buffer
+        call split_path
+        push si
+        add si, bx ; start of the file name
+        mov di, file_name_buffer
+        mov cx, 256
+        call copy_nbytes
+
+        ; putting null terminating character (0) at the start of file name portion
+        mov al, 0
+        mov [si], al
+
+        pop si
+        call load_directory ; atempt to load parent directory of whatever is under it
+
+        jnz run_ls__notfound ; if that fails, the path must be wrong
+
+        ; if it succeeds, find the file entry and show file's data
+        push si
+        mov di, file_name_buffer
+        mov si, di
+        call fix_file_name
+
+        pop si
+        call print_file_entry
+        jnz run_ls__notfound ; we have case here that parent directory exists, but there is no target file in it
+
+        jmp run_ls__finish
+
+    run_ls__notfound:
+        mov si, file_not_found
+        call print_loop
+
+    run_ls__finish:
+        ret
+
+
+print_file_entry:
+    push_abcd
+    push si
+    push di
+
+    mov si, [directory_buffer_ptr]
+
+    print_file_entry__loop:
+        mov al, [si]
+        or al, al
+        jz print_file_entry__notfound
+
+        call check_directory_entry
+        jz print_file_entry__found; check if entry found
+
+        add si, 32 ; go to the next entry
+        jmp print_file_entry__loop
+
+    print_file_entry__notfound:
+        or al, 1 ; clear ZF
+        jmp print_file_entry__finish
+
+    print_file_entry__found:
+        call print_directory_entry
+
+    print_file_entry__finish:
+        pop di
+        pop si
+        pop_dcba
+        ret
 
 
 load_directory:
@@ -894,12 +969,14 @@ buffer times BUFFER_SIZE+1 db 0
 directory_buffer_ptr dw 0
 directory_buffer times 2048 db 0 ; buffer for storing up to 64 entries
 path_buffer times 256 db 0 ; buffer for storing file path
+file_name_buffer times 256 db 0 
 
 test_directory_name db "FILES      ", 0
 prompt db "$ ", 0
 msg_hello db "Hello from kernel, indeed!", 0x0D, 0x0A, 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
 root_directory db "Root directory:", 0x0D, 0x0A, 0
+file_not_found db "File or directory not found", 0x0D, 0x0A, 0
 
 ; DOS 2.0 BPB Labels (FAT-12)
 lbl_bytes_per_sector:         db "Bytes per logical sector:    ", 0

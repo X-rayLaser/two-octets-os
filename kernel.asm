@@ -52,11 +52,6 @@ BUFFER_SIZE equ 120
 mov [boot_drive], dl
 call init_daps
 
-call print_bpb
-mov si, root_directory
-call print_loop
-call print_root_directory
-
 ; main loop
 main:
     ; show prompt
@@ -78,11 +73,16 @@ jmp hang
 run_command:
     mov di, buffer
 
+    detect_command cmd_fsinfo, run_command__fsinfo
     detect_command cmd_echo, run_command__echo
     detect_command cmd_cat, run_command__cat
     detect_command cmd_ls, run_command__ls
 
     jnz run_command__notfound
+
+    run_command__fsinfo:
+        call print_bpb
+        jmp run_command__finish
 
     run_command__echo:
         mov si, buffer
@@ -990,6 +990,7 @@ lbl_fat_size:                 db "Logical sectors per FAT:     ", 0
 cmd_notfound db "Command not found", 0x0D, 0x0A, 0
 
 ; supported commands
+cmd_fsinfo db "fsinfo", 0
 cmd_echo db "echo ", 0
 cmd_cat  db "cat ", 0
 cmd_ls   db "ls ", 0

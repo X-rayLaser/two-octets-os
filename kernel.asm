@@ -41,6 +41,14 @@ BUFFER_SIZE equ 120
     call carriage_return
 %endmacro
 
+%macro detect_command 2
+    ; arg1: match string
+    ; arg2: address of command to run
+    mov si, %1
+    call starts_with
+    jz %2
+%endmacro
+
 mov [boot_drive], dl
 call init_daps
 
@@ -70,17 +78,9 @@ jmp hang
 run_command:
     mov di, buffer
 
-    mov si, cmd_echo
-    call starts_with
-    jz run_command__echo
-
-    mov si, cmd_cat
-    call starts_with
-    jz run_command__cat
-
-    mov si, cmd_ls
-    call starts_with
-    jz run_command__ls
+    detect_command cmd_echo, run_command__echo
+    detect_command cmd_cat, run_command__cat
+    detect_command cmd_ls, run_command__ls
 
     jnz run_command__notfound
 

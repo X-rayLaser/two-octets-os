@@ -105,13 +105,7 @@ run_command:
         mov si, di
 
         call to_upper_case
-        ;call fix_file_name
 
-        mov si, path_buffer
-        call print_loop
-        jmp run_command__finish
-
-        mov si, di
         call load_directory
         mov si, [directory_buffer_ptr]
         call print_directory
@@ -162,6 +156,11 @@ load_directory:
         call clear_buffer
     
         call parse_path_segment ; next subdirectory name -> buffer
+        
+        push si
+        mov si, buffer
+        call fix_file_name
+        pop si
         mov di, buffer ; target sub directory name to load
 
         ; sanity check: buffer must not start with 0
@@ -274,13 +273,6 @@ check_directory_entry:
     push_abcd
     push si
 
-    ;mov cx, 8 ; ignore last 3 extension bytes
-    ;call copy_nbytes
-
-    ;mov ax, 0
-    ;mov [si+8], ax ; add a trailing 0
-
-    ;pop di
     mov cx, 11
     call compare_strings
 

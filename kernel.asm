@@ -103,7 +103,9 @@ run_command:
         call copy_nbytes
 
         mov si, di
-        call fix_file_name
+
+        call to_upper_case
+        ;call fix_file_name
 
         mov si, path_buffer
         call print_loop
@@ -310,6 +312,41 @@ parse_path_segment:
         stosb
 
         pop di
+        ret
+
+
+to_upper_case:
+    ; convert ascii string (with si starting address) letters to be in upper case
+    ; in-place operation
+    push si
+
+    to_upper_case__loop:
+        mov al, [si]
+        or al, al
+        jz to_upper_case__finish
+
+        mov bl, 97
+        cmp al, bl
+        jge to_upper_case__ge
+
+        jmp to_upper_case__next
+
+        to_upper_case__ge:
+            mov bl, 122
+            cmp al, bl
+            jg to_upper_case__next
+
+        to_upper_case__lc:
+            mov bl, 32
+            sub al, bl
+            mov [si], al
+        
+        to_upper_case__next:
+            inc si
+            jmp to_upper_case__loop
+
+    to_upper_case__finish:
+        pop si
         ret
 
 

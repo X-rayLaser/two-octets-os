@@ -133,28 +133,26 @@ run_ls:
     run_ls__maybe_file:
         mov si, path_buffer
         call split_path
-        push si
+
         add si, bx ; start of the file name
         mov di, file_name_buffer
-        mov cx, 256
+        mov cx, 32
         call copy_nbytes
 
         ; putting null terminating character (0) at the start of file name portion
         mov al, 0
         mov [si], al
 
-        pop si
+        mov si, path_buffer
         call load_directory ; atempt to load parent directory of whatever is under it
 
         jnz run_ls__notfound ; if that fails, the path must be wrong
 
         ; if it succeeds, find the file entry and show file's data
-        push si
-        mov di, file_name_buffer
-        mov si, di
-        call fix_file_name
 
-        pop si
+        mov si, file_name_buffer
+        call fix_file_name
+        mov di, file_name_buffer
         call print_file_entry
         jnz run_ls__notfound ; we have case here that parent directory exists, but there is no target file in it
 

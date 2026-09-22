@@ -103,6 +103,13 @@ run_command:
         call copy_nbytes
 
         mov si, di
+        call fix_file_name
+
+        mov si, path_buffer
+        call print_loop
+        jmp run_command__finish
+
+        mov si, di
         call load_directory
         mov si, [directory_buffer_ptr]
         call print_directory
@@ -395,6 +402,165 @@ copy_nbytes:
         pop di
         pop si
         pop_dcba
+        ret
+
+
+fix_file_name:
+    ; pad the file name with white-spaces to be 8 bytes long
+    ; pad the extension with white-spaces to be 3 bytes long
+    ; remove the dot if present
+
+    push si
+    push di
+
+    call detect_dot; bx will store the index of the dot
+
+    jnz fix_file_name__found_dot
+
+    mov cx, 0
+
+    fix_file_name__nodot:
+        cmp cx, 11
+        jge fix_file_name__finish
+        
+        mov al, 0
+        cmp [si], al
+        jne fix_file_name__nopad
+        
+        mov al, ' '
+        mov [si], al
+
+        fix_file_name__nopad:
+            inc cx
+            inc si
+            jmp fix_file_name__nodot
+
+    fix_file_name__found_dot:
+        mov cx, 8
+        sub cx, bx
+
+        push si
+
+        add si, bx
+        mov bx, cx ; number of white-spaces to insert
+        call str_shr_n
+
+        ; point si at the dot character and shift the remaining bytes one to the left (also removes the dot)
+        pop si
+        add si, 8
+        call str_shl_1
+
+        ; ensure null-terminator placed at the end after 11 bytes
+        mov al, 0
+        mov [si+3], al
+
+    fix_file_name__finish:
+        pop di
+        pop si
+        ret
+
+
+detect_dot:
+    push si
+
+    mov bx, 0
+
+    detect_dot__loop:        
+        lodsb
+
+        or al, al
+        jz detect_dot__finish
+
+        cmp al, '.'
+        je detect_dot__found
+
+        inc bx
+        jmp detect_dot__loop
+
+    detect_dot__found:
+        or al, 1 ; clear ZF
+
+    detect_dot__finish:
+        pop si
+        ret
+
+
+str_shl_1:
+    ; shift all string characters (starting with address si) 1 byte to the left
+    push si
+    mov al, 0
+    cmp al, [si]
+
+    je str_shl_1__finish
+
+    inc si
+
+    str_shl_1__do_shift:
+        mov al, [si]
+        mov [si - 1], al
+
+        or al, al
+        jz str_shl_1__finish
+
+        inc si
+        jmp str_shl_1__do_shift
+
+    str_shl_1__finish:
+        pop si
+        ret
+
+str_shr_n:
+    ; shift all string characters (starting with address si) n bytes to the right
+    ; fill left-most bx bytes with white spaces
+
+    push si
+    push di
+
+    push si
+
+    str_shr_n__findend:
+        lodsb
+        cmp al, 0
+        je str_shr_n__past_end
+
+        jmp str_shr_n__findend
+
+    str_shr_n__past_end:
+        ; make si lie bx bytes past the string's null terminator
+        dec si
+        add si, bx
+
+        ; restore initial string address si to di
+        pop di
+
+    str_shr_n__do_shift:
+        cmp si, di
+        jle str_shr_n__fill
+
+        ; move value bx bytes to the left of the current position si
+        sub si, bx
+        mov al, [si]
+        add si, bx
+        mov [si], al
+
+        dec si
+
+        jmp str_shr_n__do_shift
+
+    ; put bx white spaces at the start of the string
+
+    str_shr_n__fill:
+        cmp bx, 0
+        je str_shr_n__finish
+        mov al, ' '
+        stosb
+
+        dec bx
+        jmp str_shr_n__fill
+
+    str_shr_n__finish:
+        pop di
+        pop si
         ret
 
 

@@ -710,7 +710,7 @@ print_bpb:
 print_root_directory:
     mov si, ROOTDIR_ADDRESS
     call print_directory
-
+    ret
 
 print_directory:
     jc print_directory__error

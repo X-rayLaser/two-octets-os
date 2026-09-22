@@ -98,12 +98,12 @@ run_command:
         mov si, buffer
         add si, 3
 
-        mov si, ROOTDIR_ADDRESS
+        mov di, path_buffer
+        mov cx, 256
+        call copy_nbytes
 
-        mov [directory_buffer_ptr], si
-
-        mov di, test_directory_name
-        call load_next_dir
+        mov si, di
+        call load_directory
         mov si, [directory_buffer_ptr]
         call print_directory
 
@@ -176,7 +176,6 @@ load_directory:
 load_next_dir:
     ; given a current directory pointed by directory_buffer_ptr, find and load a target subdirectory pointed by di
     ; set ZF on success
-    ; set si address to memory of loaded directory
     push_abcd
     push si
     push di

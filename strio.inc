@@ -49,25 +49,7 @@ getline:
             mov al, 0
             mov [di], al
 
-            mov al, 8
-            call print_char
-
-            push cx
-
-            ; save cursor position onto stack
-            mov ah, 0x03
-            int 0x10 ; save curent cursor row and col into dh:dl
-            push dx
-
-            mov al, ' '   ; replace character to be erazed by whitespace
-            call print_char
-
-            ; restore cursor position
-            pop dx
-            mov ah, 0x02
-            int 0x10
-
-            pop cx
+            call eraze_last_char
 
             jmp getline__handle_char
 
@@ -86,6 +68,33 @@ carriage_return:
     call print_char
     mov al, 0x0A
     call print_char
+    ret
+
+
+eraze_last_char:
+    push_abcd
+    push si
+    push di
+
+    mov al, 8
+    call print_char
+
+    ; save cursor position onto stack
+    mov ah, 0x03
+    int 0x10 ; save curent cursor row and col into dh:dl
+    push dx
+
+    mov al, ' '   ; replace character to be erazed by whitespace
+    call print_char
+
+    ; restore cursor position
+    pop dx
+    mov ah, 0x02
+    int 0x10
+
+    pop di
+    pop si
+    pop_dcba
     ret
 
 

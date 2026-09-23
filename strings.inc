@@ -146,8 +146,10 @@ detect_dot:
 
 
 str_shl_1:
-    ; shift all string characters (starting with address si) 1 byte to the left
+    ; shift all string characters 1 byte to the left
+    push_abcd
     push si
+    push di
     mov al, 0
     cmp al, [si]
 
@@ -166,16 +168,22 @@ str_shl_1:
         jmp str_shl_1__do_shift
 
     str_shl_1__finish:
+        pop di
         pop si
+        pop_dcba
         ret
 
 
 str_shr_n:
     ; shift all string characters (starting with address si) n bytes to the right
     ; fill left-most bx bytes with white spaces
-
+    push_abcd
     push si
     push di
+
+    lodsb
+    cmp al, 0
+    je str_shr_n__finish
 
     push si
 
@@ -222,6 +230,7 @@ str_shr_n:
     str_shr_n__finish:
         pop di
         pop si
+        pop_dcba
         ret
 
 

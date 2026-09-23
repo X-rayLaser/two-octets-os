@@ -5,10 +5,7 @@ bits 16
 %include "constants.inc"
 
 getline:
-    push ax
-    push bx
-    push cx
-    push dx
+    push_abcd
     push si
     push di
 
@@ -32,9 +29,7 @@ getline:
         stosb
 
         ; show character
-        xor bx, bx
-        mov ah, 0x0E
-        int 0x10
+        call print_char
 
         inc cx
         jmp getline__handle_char
@@ -45,10 +40,7 @@ getline:
         call carriage_return
         pop di
         pop si
-        pop dx
-        pop cx
-        pop bx
-        pop ax
+        pop_dcba
         ret
 
 

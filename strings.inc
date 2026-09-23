@@ -2,6 +2,8 @@ bits 16
 %ifndef strings
 %define strings
 
+%include "constants.inc"
+
 to_upper_case:
     ; convert ascii string (with si starting address) letters to be in upper case
     ; in-place operation
@@ -12,19 +14,19 @@ to_upper_case:
         or al, al
         jz to_upper_case__finish
 
-        mov bl, 97
+        mov bl, 'a'
         cmp al, bl
         jge to_upper_case__ge
 
         jmp to_upper_case__next
 
         to_upper_case__ge:
-            mov bl, 122
+            mov bl, 'z'
             cmp al, bl
             jg to_upper_case__next
 
         to_upper_case__lc:
-            mov bl, 32
+            mov bl, LOWER_CASE_A - UPPER_CASE_A
             sub al, bl
             mov [si], al
         

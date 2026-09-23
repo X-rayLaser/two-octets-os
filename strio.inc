@@ -44,6 +44,9 @@ getline:
         cmp ah, KEY_LEFT_ARROW
         je getline__handle_left_key
 
+        cmp ah, KEY_RIGHT_ARROW
+        je getline__handle_right_key
+
         jmp getline__handle_char
 
         getline__handle_standard_key:
@@ -112,6 +115,19 @@ getline:
             call step_cursor_left
             jmp getline__handle_char
 
+        getline__handle_right_key:
+            ; if position index >= size of string, ignore
+            mov ax, di
+            sub ax, buffer ; ax = byte's index 
+            cmp ax, cx
+            jge getline__handle_char
+
+            inc di
+
+            call step_cursor_right
+            jmp getline__handle_char
+            
+
     getline__finish:
         call carriage_return
         pop di
@@ -172,6 +188,28 @@ step_cursor_left:
         pop si
         pop_dcba
         ret
+
+
+step_cursor_right:
+    push_abcd
+    push si
+    push di
+    
+    xor bx, bx
+    mov ah, 0x03
+    int 0x10 ; get curent cursor row and col into dh:dl
+
+    inc dl
+    mov ah, 0x02
+    int 0x10
+
+    step_cursor_right__finish:
+        pop di
+        pop si
+        pop_dcba
+        ret
+
+
 
 
 print_string:

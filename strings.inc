@@ -181,7 +181,7 @@ str_shr_n:
     push si
     push di
 
-    lodsb
+    mov al, [si]
     cmp al, 0
     je str_shr_n__finish
 

@@ -79,8 +79,7 @@ getline:
             cmp di, buffer
             je getline__handle_char
 
-            ; eraze last stored character
-
+            ; eraze character
             dec di
             mov si, di
             call str_shl_1
@@ -99,6 +98,8 @@ getline:
             restore_cursor
 
             pop cx
+
+            dec cx
 
             jmp getline__handle_char
 

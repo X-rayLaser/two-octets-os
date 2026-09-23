@@ -1,6 +1,6 @@
 bits 16
-%ifndef utils
-%define utils
+%ifndef boot_util
+%define boot_util
 
 %include "constants.inc"
 

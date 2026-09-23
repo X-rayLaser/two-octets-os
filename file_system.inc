@@ -2,6 +2,7 @@ bits 16
 %ifndef file_system
 %define file_system
 
+%include "constants.inc"
 
 %macro print_bpb_field 2
     push si

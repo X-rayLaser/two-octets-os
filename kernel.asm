@@ -43,9 +43,6 @@ main:
     jmp main
 
 
-jmp hang
-
-
 run_command:
     mov di, buffer
 
@@ -226,10 +223,8 @@ clear_buffer:
 %include "paths.inc"
 %include "strings.inc"
 %include "strio.inc"
-%include "util.inc"
+%include "boot_util.inc"
 
-hang:
-    jmp hang
 
 buffer times BUFFER_SIZE+1 db 0
 directory_buffer_ptr dw 0

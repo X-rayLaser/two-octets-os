@@ -2,6 +2,7 @@ bits 16
 %ifndef strio
 %define strio
 
+%include "constants.inc"
 
 getline:
     push ax

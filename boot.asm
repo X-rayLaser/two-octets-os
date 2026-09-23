@@ -116,7 +116,7 @@ read_fat:
 
 
 
-%include "util.inc"
+%include "boot_util.inc"
 
 file_name db "KERNEL", 0, 0
 

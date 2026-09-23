@@ -60,6 +60,7 @@ run_command:
     run_command__echo:
         mov si, buffer
         add si, 4 ; print everything in the buffer past "echo"
+        call lstrip
         call print_loop
         jmp run_command__finish
 
@@ -87,6 +88,7 @@ run_cat:
 run_ls:
     mov si, buffer
     add si, 3
+    call lstrip
 
     mov di, path_buffer
     mov cx, BUFFER_SIZE

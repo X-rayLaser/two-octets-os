@@ -4,6 +4,28 @@ bits 16
 
 %include "constants.inc"
 
+
+lstrip:
+    ; strips all white-spaces at the start of the string (si)
+    ; si will contain address of the first non-space character
+    push ax
+
+    lstrip__loop:
+        mov al, [si]
+        or al, al
+        jz lstrip__finish
+
+        cmp al, ' '
+        jne lstrip__finish
+        
+        inc si
+        jmp lstrip__loop
+    
+    lstrip__finish:
+        pop ax
+        ret
+
+
 to_upper_case:
     ; convert ascii string (with si starting address) letters to be in upper case
     ; in-place operation

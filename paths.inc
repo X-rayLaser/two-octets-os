@@ -3,6 +3,45 @@ bits 16
 %define paths
 
 
+split_path:
+    ; split path into parent directory path (si) and remaining segment (filename/directory)
+    ; stores start position of remaining segment in bx
+
+    push ax
+    push cx
+    push dx
+    push di
+
+    push si
+    call ensure_trailing_slash
+
+    mov di, buffer
+    call clear_buffer
+
+    inc si
+
+    mov bx, si
+
+    split_path__loop:
+        mov al, [si]
+        or al, al
+        jz split_path__finish
+
+        mov bx, si ; save address
+        call parse_path_segment
+        jmp split_path__loop
+
+    split_path__finish:
+        pop si
+        sub bx, si
+
+        pop di
+        pop dx
+        pop cx
+        pop ax
+        ret
+
+
 parse_path_segment:
     ; copy the next path segment from source string (si) to destination string (di)
     ; si points at the next segment after this call finishes

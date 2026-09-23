@@ -1,7 +1,7 @@
 [org 0x7e00]
 bits 16
 
-BUFFER_SIZE equ 120
+%include "constants.inc"
 
 %macro push_abcd 0
     push ax

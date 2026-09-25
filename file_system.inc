@@ -92,7 +92,7 @@ find_file:
     mov si, path_buffer
     call load_directory ; atempt to load parent directory of whatever is under it
 
-    jnz run_ls__notfound ; if that fails, the path must be wrong
+    jnz find_file__finish ; if that fails, the path must be wrong
 
     ; if it succeeds, find the file entry and show file's data
 

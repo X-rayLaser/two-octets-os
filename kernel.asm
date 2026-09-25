@@ -81,8 +81,38 @@ run_command:
 
 
 run_cat:
+    mov si, buffer
     add si, 4
-    ret
+    call lstrip
+
+    mov di, path_buffer
+    mov cx, BUFFER_SIZE
+    call copy_nbytes
+
+    mov si, di
+
+    call to_upper_case
+    mov si, path_buffer
+
+    call find_file
+
+    jnz run_cat__notfound
+
+    mov bx, [si+26]
+    mov di, file_buffer
+    mov [data_offset], di
+    call load_file
+    mov si, file_buffer
+    call print_loop
+    jmp run_cat__finish
+
+    run_cat__notfound:
+        mov si, file_not_found
+        call print_loop
+
+
+    run_cat__finish:
+        ret
 
 
 run_ls:

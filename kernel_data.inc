@@ -7,6 +7,7 @@
 buffer times BUFFER_SIZE + 1 db 0
 directory_buffer_ptr dw 0
 directory_buffer times 2048 db 0 ; buffer for storing up to 64 entries
+file_buffer times 4096 db 0      ; buffer for storing up to 4 KB of files data
 path_buffer times BUFFER_SIZE + 1 db 0 ; buffer for storing file path
 file_name_buffer times BUFFER_SIZE + 1 db 0 
 

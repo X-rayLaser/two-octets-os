@@ -103,7 +103,7 @@ run_cat:
     mov [data_offset], di
     call load_file
     mov si, file_buffer
-    call print_loop
+    call file_viewer
     jmp run_cat__finish
 
     run_cat__notfound:
@@ -151,6 +151,105 @@ run_ls:
         call print_loop
 
     run_ls__finish:
+        ret
+
+
+file_viewer:
+
+    file_viewer__loop:
+        call show_page
+        call get_char
+        jmp file_viewer__loop
+
+    ret
+
+show_page:
+    ; si = start of first byte that belongs to the page
+    mov cx, 0
+
+    show_page__loop:
+        mov ax, 24
+        cmp cx, ax
+        je show_page__finish
+
+        mov al, [si]
+        or al, al
+        jz show_page__finish
+
+        call read_file_line
+        inc cx
+        push si
+        mov si, buffer
+        call print_loop
+        call carriage_return
+        pop si
+        jmp show_page__loop
+
+    show_page__finish:
+        ret
+
+
+read_file_line:
+    push_abcd
+    push di
+
+    mov cx, 0
+
+    push si
+
+    read_file_line__loop:
+        call is_newline
+        jz read_file_line__line_end
+
+        ; consider every w char sequence (without newline character) a line
+        ; where w is display width
+        mov ax, 80
+        cmp cx, ax
+        je read_file_line__line_end
+
+        mov al, [si]
+        or al, al
+        jz read_file_line__line_end
+
+        inc cx
+        inc si
+
+        jmp read_file_line__loop
+
+    read_file_line__line_end:
+        mov dx, si ; preserve next line address
+        pop si
+
+
+        mov di, buffer
+        call clear_buffer
+        call copy_nbytes
+
+        add si, cx
+        mov al, 0
+        mov [si], al
+        mov si, dx ; restore next line address
+
+    read_file_line__finish:
+        pop di
+        pop_dcba
+        ret
+
+
+is_newline:
+    mov al, 10
+    cmp [si], al
+    jne is_newline__notfound
+
+    is_newline__found:
+        inc si
+        and al, 0
+        jmp is_newline__finish
+
+    is_newline__notfound:
+        or al, 1
+
+    is_newline__finish:
         ret
 
 

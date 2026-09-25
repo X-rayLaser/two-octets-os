@@ -136,6 +136,19 @@ getline:
         ret
 
 
+get_char:
+    push ax
+    push bx
+    
+    xor bx, bx
+    mov ah, 0x00
+    int 0x16
+
+    pop bx
+    pop ax
+    ret
+
+
 carriage_return:
     mov al, 0x0D
     call print_char

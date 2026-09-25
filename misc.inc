@@ -63,6 +63,7 @@ itos:
 clear_buffer:
     push ax
     push bx
+    push cx
     push di
 
     mov cx, BUFFER_SIZE
@@ -79,6 +80,7 @@ clear_buffer:
 
     clear_buffer__finish:
         pop di
+        pop cx
         pop bx
         pop ax
         ret

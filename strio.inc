@@ -137,15 +137,17 @@ getline:
 
 
 get_char:
-    push ax
     push bx
+    push cx
+    push dx
     
     xor bx, bx
     mov ah, 0x00
     int 0x16
 
+    pop dx
+    pop cx
     pop bx
-    pop ax
     ret
 
 

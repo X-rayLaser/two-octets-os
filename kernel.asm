@@ -157,11 +157,44 @@ run_ls:
 file_viewer:
 
     file_viewer__loop:
+        mov al, [si]
+        or al, al
+        jz file_viewer__finish
         call show_page
+
+        push si
+        mov si, viewer_help_scroll_down
+        call print_loop
         call get_char
+        call clear_help_line
+        pop si
         jmp file_viewer__loop
 
-    ret
+    file_viewer__finish:
+        ret
+
+
+clear_help_line:
+    push ax
+    push cx
+    
+    clear_help_line__loop:
+        mov al, 80
+        cmp cl, al
+        je clear_help_line__finish
+
+        mov al, ' '
+        call print_char
+        inc cl
+        jmp clear_help_line__loop
+
+    clear_help_line__finish:
+        mov al, 13
+        call print_char
+        pop cx
+        pop ax
+        ret
+
 
 show_page:
     ; si = start of first byte that belongs to the page
@@ -178,11 +211,13 @@ show_page:
 
         call read_file_line
         inc cx
+
         push si
         mov si, buffer
         call print_loop
         call carriage_return
         pop si
+
         jmp show_page__loop
 
     show_page__finish:
@@ -224,10 +259,6 @@ read_file_line:
         mov di, buffer
         call clear_buffer
         call copy_nbytes
-
-        add si, cx
-        mov al, 0
-        mov [si], al
         mov si, dx ; restore next line address
 
     read_file_line__finish:

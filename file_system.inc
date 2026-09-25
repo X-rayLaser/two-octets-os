@@ -44,34 +44,29 @@ print_bpb:
     ret
 
 
-print_file_entry:
+search_dir_entry:
+    ; on success, sets ZF and sets si to the address of the target entry
     push_abcd
-    push si
     push di
 
     mov si, [directory_buffer_ptr]
 
-    print_file_entry__loop:
+    search_dir_entry__loop:
         mov al, [si]
         or al, al
-        jz print_file_entry__notfound
+        jz search_dir_entry__notfound
 
         call check_directory_entry
-        jz print_file_entry__found; check if entry found
+        jz search_dir_entry__finish; check if entry found
 
         add si, 32 ; go to the next entry
-        jmp print_file_entry__loop
+        jmp search_dir_entry__loop
 
-    print_file_entry__notfound:
+    search_dir_entry__notfound:
         or al, 1 ; clear ZF
-        jmp print_file_entry__finish
 
-    print_file_entry__found:
-        call print_directory_entry
-
-    print_file_entry__finish:
+    search_dir_entry__finish:
         pop di
-        pop si
         pop_dcba
         ret
 

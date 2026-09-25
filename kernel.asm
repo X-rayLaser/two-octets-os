@@ -128,8 +128,11 @@ run_ls:
         mov si, file_name_buffer
         call fix_file_name
         mov di, file_name_buffer
-        call print_file_entry
+        call search_dir_entry
         jnz run_ls__notfound ; we have case here that parent directory exists, but there is no target file in it
+
+        ; file entry found, display it
+        call print_directory_entry
 
         jmp run_ls__finish
 

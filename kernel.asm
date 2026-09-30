@@ -2,6 +2,7 @@
 bits 16
 
 %include "constants.inc"
+%include "macros.inc"
 
 %macro push_abcd 0
     push ax

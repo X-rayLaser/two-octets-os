@@ -107,6 +107,9 @@ load_subdir_entry:
 
 
 append_file:
+    push_abcd
+    push si
+    push di
     ; add a few bytes to the end of a given a file
     ; expects si to store address of a buffer
     ; expects bx to store a starting cluster of the file
@@ -115,39 +118,50 @@ append_file:
 
     ; find last cluster of the file
 
-    ; load last cluster
+    append_file__loop:    
 
-    push bx
+    call get_cluster_remaining_space  ; ax now stores remaining unused space in a cluster
 
-    ; compute total cluster size in bytes 
-    xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
-    mov bx, [0x7c00+0x00B] ; bytes per logical sector
-    mul bx                 ; ax = bytes per cluster
-    
-    ; ax = file size / cluster size in bytes
-    mov bx, ax
-    mov ax, dx
-    xor dx, dx
-    div bx
-
-    pop bx
     ; todo: modulo arithmetics for remainders > 255
-    cmp dl, cl
+    cmp ax, cx
 
     jl append_file__data_not_fits
 
     append_file__data_fits:
-        ; append data to file buffer
-        ; write file buffer
+        push cx
+        call get_cluster_size
+
+        mov cx, ax
+        mov ax, dx
+        xor dx, dx
+        div cx
+
+        pop cx
+        call update_cluster
+        
         jmp append_file__finish
 
     append_file__data_not_fits:
         ; append a few bytes to complete cluster
-        ; write file buffer to disk
-        ; allocate new cluster and add it to the file
-        ; update file buffer to only contain remaining bytes
-        ; write file buffer to disk
+        push cx
+        mov cx, ax
+        call update_cluster
+
+        pop cx
+        sub cx, ax
+        add si, ax ; skip bytes written to previous cluster
+        add dx, ax ; increese file length by number of bytes written
+
+        push bx
+        call allocate_cluster ; new cluster num -> bx
+        call clear_cluster
+
+        mov ax, bx
+        pop bx                ; old cluster num
+        call chain_cluster
+
+        mov bx, ax
+        jmp append_file__loop
 
     append_file__finish:
         ret

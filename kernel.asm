@@ -288,6 +288,7 @@ is_newline:
 %include "file_system.inc"
 %include "paths.inc"
 %include "strings.inc"
+%include "diskio.inc"
 %include "strio.inc"
 %include "misc.inc"
 %include "boot_util.inc"

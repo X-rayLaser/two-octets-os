@@ -48,4 +48,6 @@ cmd_ls   db "ls ", 0
 ; file viewer help
 viewer_help_scroll_down db "Press any key to scroll down", 13, 0
 
+cluster_buffer times 4096 db 0 ; buffer for storing cluster data in memory
+
 %endif

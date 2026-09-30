@@ -46,24 +46,64 @@ print_bpb:
 
 create_file:
     ; path buffer contains address of a path of file to be created
-    call split_path
-
-    add si, bx ; start of the file name
+    mov si, path_buffer
     mov di, file_name_buffer
+    call split_and_copy
+    ; here path_buffer contains path to the file's parent directory
+
+    ; get file's parent directory length and store it in dx
+    call load_subdir_entry
+    jnz create_file__error
+    mov dx, [si+28] ; note: read first 2 bytes of 4-byte file length field
+    push dx
+
+    call create_directory_entry
+
+    ; todo: handle corner case of creating files in the root directory, e.g. /filename
+    ; store the cluster number of the file's parent directory in bx
+    mov si, path_buffer
+    call load_directory
+    jnz create_file__error
+
+    ; treat directory like file and append to it 32-bytes entry corresponding to a new file
+    ; and persist it to disk
+    mov si, new_dir_entry_buffer
     mov cx, 32
+    pop dx
+    ; bx should contain the cluster no
+    call append_file
+
+    create_file__error:
+
+
+    create_file__finish:
+        ret
+
+
+load_subdir_entry:
+    ; load parent directory of a given subdirectory and find directory entry describing it
+    ; si: address of a subdirectory path
+    ; on success, si will contain address of target entry
+    push_abcd
+    push di
+
+    mov di, parent_path_buffer
+    mov cx, 256
     call copy_nbytes
 
-    ; putting null terminating character (0) at the start of file name portion
-    mov al, 0
-    mov [si], al
+    mov si, parent_path_buffer
+    mov di, subdir_name_buffer
+    call get_parent
 
-    mov si, path_buffer
-    call load_directory ; atempt to load parent directory of whatever is under it
+    mov si, parent_path_buffer
+    call load_directory
 
-    jnz create_file__finish ; if that fails, the path must be wrong
+    mov di, subdir_name_buffer
+    call search_dir_entry
 
-    ; wanted: a function that gets starting cluster of a directory
-    ; wanted: a function that append n bytes to a file (use that to append an entry for new file to the directory)
+    pop di
+    pop_dcba
+    ret
 
 
 append_file:
@@ -71,18 +111,69 @@ append_file:
     ; expects si to store address of a buffer
     ; expects bx to store a starting cluster of the file
     ; expects cx to store number of bytes to write
+    ; expects dx to store file size
+
+    ; find last cluster of the file
+
+    ; load last cluster
+
+    push bx
+
+    ; compute total cluster size in bytes 
+    xor ax, ax
+    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mov bx, [0x7c00+0x00B] ; bytes per logical sector
+    mul bx                 ; ax = bytes per cluster
+    
+    ; ax = file size / cluster size in bytes
+    mov bx, ax
+    mov ax, dx
+    xor dx, dx
+    div bx
+
+    pop bx
+    ; todo: modulo arithmetics for remainders > 255
+    cmp dl, cl
+
+    jl append_file__data_not_fits
+
+    append_file__data_fits:
+        ; append data to file buffer
+        ; write file buffer
+        jmp append_file__finish
+
+    append_file__data_not_fits:
+        ; append a few bytes to complete cluster
+        ; write file buffer to disk
+        ; allocate new cluster and add it to the file
+        ; update file buffer to only contain remaining bytes
+        ; write file buffer to disk
+
+    append_file__finish:
+        ret
 
 
+create_directory_entry:
+    push_abcd
+    push si
+    push di
 
+    mov si, file_name_buffer
+    call fix_file_name
 
-append_directory_entry:
-    ; si is the address of a given directory
-    call allocate_cluster ; cluster number -> bx
+    call allocate_cluster ; new cluster number -> bx
 
-    mov si, buffer
-    call prepare_entry    ; entry -> buffer
+    ; copy 11 bytes of file name into the buffer
+    mov di, new_dir_entry_buffer
+    call clear_buffer
+    mov cx, 11
+    call copy_nbytes
+    mov [si+26], bx
 
-
+    pop di
+    pop si
+    pop_dcba
+    ret
 
 
 allocate_cluster:
@@ -254,7 +345,7 @@ clear_cluster:
 
 
 search_dir_entry:
-    ; on success, sets ZF and sets si to the address of the target entry
+    ; on success, sets ZF and sets si to the address of the target entry containing filename di
     push_abcd
     push di
 
@@ -317,7 +408,7 @@ find_file:
 
 
 load_directory:
-    ; copies directory data into directory_buffer and sets ZF on success
+    ; copies directory data into directory_buffer, sets ZF and saves first directory cluster in bx on success
     ; si points to the directory path with leading /
 
     mov di, ROOTDIR_ADDRESS
@@ -374,8 +465,10 @@ load_directory:
 
 load_next_dir:
     ; given a current directory pointed by directory_buffer_ptr, find and load a target subdirectory pointed by di
-    ; set ZF on success
-    push_abcd
+    ; save the first cluster of subdirectory in bx and set ZF on success
+    push ax
+    push cx
+    push dx
     push si
     push di
 
@@ -404,6 +497,7 @@ load_next_dir:
         jne load_next_dir__next_entry ; if it's not directory, go back to loop
 
         mov bx, [si+26] ; get first sector of subdirectory
+        push bx
 
         ; load directory to be at directory_buffer address
         mov di, directory_buffer
@@ -411,16 +505,16 @@ load_next_dir:
         mov [directory_buffer_ptr], di
         call load_file
 
+        pop bx
         xor al, al ; force setting ZF
 
     load_next_dir__finish:
         pop di
         pop si
-        pop_dcba
+        pop dx
+        pop cx
+        pop ax
         ret
-
-
-
 
 
 check_directory_entry:

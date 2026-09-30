@@ -3,6 +3,37 @@ bits 16
 %define paths
 
 
+get_parent:
+    ; given a file/directory path, extracts path to its parent
+    ; expects:
+    ;   si to store input path address, 
+    ;   di to store output path address
+    call split_and_copy
+    ret
+
+
+split_and_copy:
+    ; similar to split_path, but copy the final segment into address given by di
+    ; and truncate the preceding part of string (si) in place
+    push_abcd
+    push si
+    push di
+    call split_path
+
+    add si, bx ; start of the file name
+    mov cx, 32
+    call copy_nbytes
+
+    ; putting null terminating character (0) at the start of file name portion
+    mov al, 0
+    mov [si], al
+
+    pop di
+    pop si
+    pop_dcba
+    ret
+
+
 split_path:
     ; split path into parent directory path (si) and remaining segment (filename/directory)
     ; stores start position of remaining segment in bx

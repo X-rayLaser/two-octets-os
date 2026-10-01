@@ -50,6 +50,7 @@ viewer_help_scroll_down db "Press any key to scroll down", 13, 0
 
 file_append_struct times 8 db 0
 cluster_args_struct times 8 db 0 ; data structure storing arguments to update_cluster
+update_entry_structure times 8 db 0 
 ; data buffer address | cluster number | count | byte offset within cluster
 
 cluster_buffer times 4096 db 0 ; buffer for storing cluster data in memory

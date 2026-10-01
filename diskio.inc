@@ -2,6 +2,23 @@ bits 16
 %ifndef diskio
 %define diskio
 
+%macro cluster_rw 1
+    push_registers
+
+    xor ax, ax
+    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mov [daps+2], ax
+
+    call set_cluster_address
+
+    mov ax, cluster_buffer
+    call set_transfer_buffer
+
+    call %1
+
+    pop_registers
+%endmacro
+
 
 get_cluster_remaining_space:
     ; compute unused space in bytes in the last file's cluster
@@ -38,8 +55,9 @@ get_last_cluster:
         call get_next_cluster_num
 
         cmp bx, 0xfff
-        je load_file__finish
+        je get_last_cluster__finish
         cmp bx, 0xff0f
+        je get_last_cluster__finish
 
         pop cx ; forget it
         jmp get_last_cluster__loop
@@ -106,29 +124,18 @@ update_cluster:
 
 read_cluster:
     ; bx: cluster number (2-based)
-    push_abcd
-    push si
-    push di
+    cluster_rw read_disk_lba
+    ret
 
-    xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
-    mov [daps+2], ax
 
-    call set_cluster_address
-
-    mov ax, cluster_buffer
-    call set_transfer_buffer
-
-    call read_disk_lba
-
-    pop di
-    pop si
-    pop_dcba
+write_cluster:
+    ; bx: cluster number (2-based)
+    cluster_rw write_disk_lba
     ret
 
 
 set_cluster_address:
-    ; locate first physical sector of a cluster and 
+    ; locate first physical sector of a cluster and write it to DAPS
     ; bx: cluster number (2-based)
     push_abcd
     push si

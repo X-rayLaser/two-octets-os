@@ -109,6 +109,51 @@ load_subdir_entry:
     ret
 
 
+update_directory_entry:
+    ; scan directory to find target entry and replace it with a given buffer
+    ; update_entry_structure:
+    ;   buffer address, 2 bytes
+    ;   directory start cluster, 2 bytes
+    ;   target file name address, 2 bytes
+    push_registers
+
+    update_directory_entry__loop:
+        mov bx, [update_entry_structure+2]
+        call read_cluster
+
+        mov di, cluster_buffer
+        mov [directory_buffer_ptr], di
+        mov di, [update_entry_structure+4]
+        call search_dir_entry
+        jz update_directory_entry__do_update
+
+        call get_next_cluster_num
+        cmp bx, 0xfff
+        je update_directory_entry__not_found
+        cmp bx, 0xff0f
+        je update_directory_entry__not_found
+
+        jmp update_directory_entry__loop
+
+    update_directory_entry__do_update:
+        ; replace old 32-byte entry with new entry in the buffer
+        mov di, si                       ; di = start of old entry in cluster_buffer
+        mov si, [update_entry_structure] ; si = buffer address
+        mov cx, 32
+        call copy_nbytes
+        call write_cluster
+        sub cx, cx ; force set ZF
+        jmp update_directory_entry__finish
+
+    update_directory_entry__not_found:
+        mov ax, 1
+        or ax, bx ; clear ZF
+
+    update_directory_entry__finish:
+        pop_registers
+        ret
+
+
 append_file:
     ; add a few bytes to the end of a given a file
 

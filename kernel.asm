@@ -148,7 +148,7 @@ run_ls:
 
 run_rename:
     mov si, buffer
-    add si, 3
+    add si, 7
     call lstrip
 
     mov di, path_buffer
@@ -158,9 +158,12 @@ run_rename:
     mov si, di
 
     call to_upper_case
+    mov si, path_buffer
 
     ; retrieve into new temp buffer an entry of the file to be renamed
     call find_file ; file entry -> si
+    jnz run_rename__error
+
     mov cx, 32
     mov di, new_dir_entry_buffer
     call copy_nbytes
@@ -179,6 +182,7 @@ run_rename:
     ; load parent directory and get it's starting cluster number
     mov si, path_buffer
     call load_directory
+    jnz run_rename__error
 
     ; set cluster number of the directory whose entry needs update
     mov [update_entry_structure+2], bx
@@ -187,9 +191,18 @@ run_rename:
     mov si, file_name_buffer
     mov [update_entry_structure+4], si
 
+
     ; update the entry and write changes to disk
     call update_directory_entry
-    ret
+
+    jmp run_rename__finish
+
+    run_rename__error:
+        mov si, file_not_found
+        call print_loop
+
+    run_rename__finish:
+        ret
 
 
 file_viewer:

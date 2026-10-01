@@ -137,11 +137,7 @@ write_cluster:
 set_cluster_address:
     ; locate first physical sector of a cluster and write it to DAPS
     ; bx: cluster number (2-based)
-    push_abcd
-    push si
-    push di
-
-    push bx
+    push_registers
     
     ; ax = (bx - 2) * cluster size
     dec bx
@@ -162,9 +158,7 @@ set_cluster_address:
     add ax, cx
 
     call set_lba_address
-    pop di
-    pop si
-    pop_dcba
+    pop_registers
     ret
 
 

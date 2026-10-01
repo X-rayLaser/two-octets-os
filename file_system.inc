@@ -124,9 +124,12 @@ update_directory_entry:
         mov di, cluster_buffer
         mov [directory_buffer_ptr], di
         mov di, [update_entry_structure+4]
+
+        ; todo: search may freeze due to going outside the cluster buffer (and missing 0 byte)
         call search_dir_entry
         jz update_directory_entry__do_update
 
+        mov bx, [update_entry_structure+2]
         call get_next_cluster_num
         cmp bx, 0xfff
         je update_directory_entry__not_found

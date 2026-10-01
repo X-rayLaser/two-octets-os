@@ -307,25 +307,12 @@ chain_cluster:
     push si
     push di
 
-
     push ax
 
-    chain_cluster__traverse_chain:
-        push bx
-        call get_next_cluster_num ; bx = next cluster number
-        cmp bx, 0xfff
-        je chain_cluster__update_fat
-        cmp bx, 0xff0f
-        je chain_cluster__update_fat
-
-        pop ax ; dismiss saved bx
-        jmp chain_cluster__traverse_chain
+    call get_last_cluster ; bx here is the last cluster number of the chain
 
     chain_cluster__update_fat:
-        pop bx ; bx here is the last cluster number of the chain
-
         locate_fat_row
-
         cmp dl, 0
         jne chain_cluster__update_odd
 

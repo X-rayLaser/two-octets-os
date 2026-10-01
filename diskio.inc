@@ -32,7 +32,6 @@ get_last_cluster:
     ; find the last cluster in the chain
     ; accepts initial cluster number bx
     ; updates bx with number of found cluster
-    push_registers
 
     get_last_cluster__loop:
         push bx ; memorize current cluster number
@@ -46,8 +45,7 @@ get_last_cluster:
         jmp get_last_cluster__loop
 
     get_last_cluster__finish:
-        pop bx ; result 
-        pop_registers
+        pop bx ; result
         ret
 
 

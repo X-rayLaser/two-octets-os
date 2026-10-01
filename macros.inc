@@ -1,3 +1,17 @@
+%macro push_abcd 0
+    push ax
+    push bx
+    push cx
+    push dx
+%endmacro
+
+%macro pop_dcba 0
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+%endmacro
+
 %macro locate_fat_row 0
     ; find an address of a row (pair of 12 bit entries) in FAT corresponding to a given cluster number
     ; store address in si
@@ -16,4 +30,16 @@
     add si, ax
 
     pop dx
+%endmacro
+
+%macro push_registers 0
+    push_abcd
+    push si
+    push di
+%endmacro
+
+%macro pop_registers 0
+    pop di
+    pop si
+    pop_dcba
 %endmacro

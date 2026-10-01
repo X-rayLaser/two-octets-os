@@ -4,20 +4,6 @@ bits 16
 %include "constants.inc"
 %include "macros.inc"
 
-%macro push_abcd 0
-    push ax
-    push bx
-    push cx
-    push dx
-%endmacro
-
-%macro pop_dcba 0
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-%endmacro
-
 %macro detect_command 2
     ; arg1: match string
     ; arg2: address of command to run

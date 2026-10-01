@@ -70,7 +70,10 @@ create_file:
     mov si, new_dir_entry_buffer
     mov cx, 32
     pop dx
-    ; bx should contain the cluster no
+    mov [file_append_struct], si
+    mov [file_append_struct+2], bx
+    mov [file_append_struct+4], cx
+    mov [file_append_struct+6], dx
     call append_file
 
     create_file__error:
@@ -107,64 +110,107 @@ load_subdir_entry:
 
 
 append_file:
-    push_abcd
-    push si
-    push di
     ; add a few bytes to the end of a given a file
-    ; expects si to store address of a buffer
-    ; expects bx to store a starting cluster of the file
-    ; expects cx to store number of bytes to write
-    ; expects dx to store file size
 
-    ; find last cluster of the file
+    push_registers
 
-    append_file__loop:    
+    call configure_initial_file_update_structure
 
-    call get_cluster_remaining_space  ; ax now stores remaining unused space in a cluster
+    append_file__loop:
+        mov dx, [cluster_args_struct+6]
+        call get_cluster_remaining_space  ; ax now stores remaining unused space in a cluster
 
-    ; todo: modulo arithmetics for remainders > 255
-    cmp ax, cx
+        ; todo: verify modulo arithmetics for remainders > 255
+        cmp ax, [file_append_struct+4]
 
-    jl append_file__data_not_fits
+        jl append_file__data_not_fits
 
-    append_file__data_fits:
-        push cx
-        call get_cluster_size
+        append_file__data_fits:
+            call update_cluster
+            jmp append_file__finish
 
-        mov cx, ax
-        mov ax, dx
-        xor dx, dx
-        div cx
-
-        pop cx
-        call update_cluster
-        
-        jmp append_file__finish
-
-    append_file__data_not_fits:
-        ; append a few bytes to complete cluster
-        push cx
-        mov cx, ax
-        call update_cluster
-
-        pop cx
-        sub cx, ax
-        add si, ax ; skip bytes written to previous cluster
-        add dx, ax ; increese file length by number of bytes written
-
-        push bx
-        call allocate_cluster ; new cluster num -> bx
-        call clear_cluster
-
-        mov ax, bx
-        pop bx                ; old cluster num
-        call chain_cluster
-
-        mov bx, ax
-        jmp append_file__loop
+        append_file__data_not_fits:
+            call complete_cluster_and_advance
+            call complete_cluster_and_advance  
+            jmp append_file__loop
 
     append_file__finish:
+        pop_registers
         ret
+
+
+configure_initial_file_update_structure:
+    push_registers
+
+    ; find last cluster of the file
+    mov bx, [file_append_struct+2]
+    call get_last_cluster
+
+    ; copy one structure content to another
+    mov si, [file_append_struct]
+    mov di, [cluster_args_struct]
+    mov cx, 8
+    call copy_nbytes
+
+    ; find byte offset of the first affected cluster
+    call get_cluster_size
+
+    ; dx = file size % cluster size
+    mov ax, [file_append_struct+6]
+    xor dx, dx
+    div cx
+    mov [cluster_args_struct+6], dx
+
+    pop_registers
+    ret
+
+
+complete_cluster_and_advance:
+    ; append a few bytes to complete the last cluster
+    ; configure next write operation
+
+    push_registers
+    call get_cluster_remaining_space
+    mov [cluster_args_struct+4], ax
+    call update_cluster
+
+    ; advance a buffer address
+    mov si, [cluster_args_struct]
+    add si, ax ; skip bytes written to previous cluster
+    mov [cluster_args_struct], si
+
+    ; decrease number of remaining bytes to write
+    mov cx, [file_append_struct+4]
+    sub cx, ax
+    mov [file_append_struct+4], cx
+
+    ; set write position right at the beginning of next cluster
+    mov dx, 0
+    mov [cluster_args_struct+6], dx
+
+    pop_registers
+    ret
+
+
+create_and_goto_cluster:
+    ; cx is number of bytes to write
+    push_registers
+
+    ; prepare new cluster
+    mov bx, [cluster_args_struct+2]
+    call allocate_cluster ; new cluster num -> bx
+    call clear_cluster
+
+    ; link it to the file's chain
+    mov ax, bx
+    mov bx, [cluster_args_struct+2]                ; old cluster num
+    call chain_cluster
+
+    ; update structure with new cluster number
+    mov [cluster_args_struct+2], ax
+
+    pop_registers
+    ret
 
 
 create_directory_entry:
@@ -272,7 +318,7 @@ chain_cluster:
         cmp bx, 0xff0f
         je chain_cluster__update_fat
 
-        pop bx
+        pop ax ; dismiss saved bx
         jmp chain_cluster__traverse_chain
 
     chain_cluster__update_fat:

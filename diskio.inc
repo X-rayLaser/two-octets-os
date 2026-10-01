@@ -11,16 +11,15 @@ get_cluster_remaining_space:
     push cx
     push dx
 
-    call get_cluster_size ; ax = bytes per cluster
+    call get_cluster_size ; cx = bytes per cluster
     
     ; ax = file size / cluster size in bytes
-    mov bx, ax
     mov ax, dx
     xor dx, dx
-    div bx
+    div cx
 
     ; bx now stores remaining unused space in a cluster
-    sub bx, dx
+    sub cx, dx
     mov ax, bx
 
     pop dx
@@ -29,35 +28,68 @@ get_cluster_remaining_space:
     ret
 
 
+get_last_cluster:
+    ; find the last cluster in the chain
+    ; accepts initial cluster number bx
+    ; updates bx with number of found cluster
+    push_registers
+
+    get_last_cluster__loop:
+        push bx ; memorize current cluster number
+        call get_next_cluster_num
+
+        cmp bx, 0xfff
+        je load_file__finish
+        cmp bx, 0xff0f
+
+        pop cx ; forget it
+        jmp get_last_cluster__loop
+
+    get_last_cluster__finish:
+        pop bx ; result 
+        pop_registers
+        ret
+
+
 get_cluster_size:
     ; compute total cluster size in bytes
-    ; store result in ax
+    ; store result in cx
+    push ax
     push bx
 
     xor ax, ax
     mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
     mov bx, [0x7c00+0x00B] ; bytes per logical sector
     mul bx                 ; ax = bytes per cluster
-    
+    mov cx, ax
+
     pop bx
+    pop ax
     ret
 
 
 update_cluster:
     ; read cluster from disk, modify it in-memory, write it back to disk
-    ; si: address of a byte string to modify cluster with
-    ; bx: cluster number (2-based)
-    ; cx: number of bytes to write
-    ; dx: cluster's byte offset
+    ; pass arguments in cluster_args_struct:
+    ;    address of a byte string to modify cluster with, 2 bytes
+    ;    cluster number (2-based), 2 bytes
+    ;    number of bytes to write, 2 bytes
+    ;    byte offset within cluster, 2bytes
+
+
     ; set number of sectors to transfer to equal cluster size (in sectors)
     push_abcd
     push si
     push di
 
+    mov si, [cluster_args_struct]
+    mov bx, [si+2]
     call read_cluster
 
     mov di, cluster_buffer
-    add di, dx
+
+    mov cx, [si+4]
+    add di, [si+6]
     call copy_nbytes
 
     call write_disk_lba

@@ -138,7 +138,7 @@ update_directory_entry:
     update_directory_entry__do_update:
         ; replace old 32-byte entry with new entry in the buffer
         mov di, si                       ; di = start of old entry in cluster_buffer
-        mov si, [update_entry_structure] ; si = buffer address
+        mov si, [update_entry_structure] ; si = buffer address of a new entry
         mov cx, 32
         call copy_nbytes
         call write_cluster

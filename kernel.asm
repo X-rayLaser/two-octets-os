@@ -37,6 +37,7 @@ run_command:
     detect_command cmd_echo, run_command__echo
     detect_command cmd_cat, run_command__cat
     detect_command cmd_ls, run_command__ls
+    detect_command cmd_rename, run_command__rename
 
     jnz run_command__notfound
 
@@ -58,6 +59,10 @@ run_command:
     run_command__ls:
         call run_ls
         jmp run_command__finish
+
+    run_command__rename:
+        call run_rename
+        jmp run_cat__finish
 
     run_command__notfound:
         mov si, cmd_notfound
@@ -139,6 +144,52 @@ run_ls:
 
     run_ls__finish:
         ret
+
+
+run_rename:
+    mov si, buffer
+    add si, 3
+    call lstrip
+
+    mov di, path_buffer
+    mov cx, BUFFER_SIZE
+    call copy_nbytes
+
+    mov si, di
+
+    call to_upper_case
+
+    ; retrieve into new temp buffer an entry of the file to be renamed
+    call find_file ; file entry -> si
+    mov cx, 32
+    mov di, new_dir_entry_buffer
+    call copy_nbytes
+
+    ; prepare new file name and replace old file name with it (in-memory)
+    mov si, new_file_name_buffer
+    call to_upper_case
+    call fix_file_name
+    mov cx, 11
+    mov di, new_dir_entry_buffer
+    call copy_nbytes
+
+    ; provide address of a new entry
+    mov [update_entry_structure], di
+
+    ; load parent directory and get it's starting cluster number
+    mov si, path_buffer
+    call load_directory
+
+    ; set cluster number of the directory whose entry needs update
+    mov [update_entry_structure+2], bx
+
+    ; provide old file name to find the entry
+    mov si, file_name_buffer
+    mov [update_entry_structure+4], si
+
+    ; update the entry and write changes to disk
+    call update_directory_entry
+    ret
 
 
 file_viewer:

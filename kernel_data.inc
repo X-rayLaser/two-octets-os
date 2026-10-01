@@ -14,7 +14,7 @@ file_buffer times 4096 db 0      ; buffer for storing up to 4 KB of files data
 null_buffer times 4096 db 0      ; buffer of zeros to prepare allocated clusters with size up to 4 KB
 path_buffer times BUFFER_SIZE + 1 db 0 ; buffer for storing file path
 file_name_buffer times BUFFER_SIZE + 1 db 0
-
+new_file_name_buffer db "newfile.txt", 0, 0, 0, 0, 0, 0
 parent_path_buffer times BUFFER_SIZE + 1 db 0 ; another buffer for storing path to the parent directory
 subdir_name_buffer times BUFFER_SIZE + 1 db 0 ; another buffer for storing subdirectory name
 new_dir_entry_buffer times BUFFER_SIZE + 1 db 0 ; buffer for storing a new directory entry
@@ -44,6 +44,7 @@ cmd_fsinfo db "fsinfo", 0
 cmd_echo db "echo ", 0
 cmd_cat  db "cat ", 0
 cmd_ls   db "ls ", 0
+cmd_rename db "rename", 0
 
 ; file viewer help
 viewer_help_scroll_down db "Press any key to scroll down", 13, 0

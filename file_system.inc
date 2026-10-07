@@ -45,6 +45,7 @@ print_bpb:
 
 
 create_file:
+    push_registers
     ; path buffer contains address of a path of file to be created
     mov si, path_buffer
     mov di, file_name_buffer
@@ -76,10 +77,15 @@ create_file:
     mov [file_append_struct+6], dx
     call append_file
 
-    create_file__error:
+    ; add 32 to the length field of parent of parent
+    call fix_directory_length
+    jz create_file__finish
 
+    create_file__error:
+        or cx, 1 ; clear ZF
 
     create_file__finish:
+        pop_registers
         ret
 
 
@@ -198,26 +204,10 @@ update_directory_entry:
     ;   target file name address, 2 bytes
     push_registers
 
-    update_directory_entry__loop:
-        mov bx, [update_entry_structure+2]
-        call read_cluster
-
-        mov di, cluster_buffer
-        mov [directory_buffer_ptr], di
-        mov di, [update_entry_structure+4]
-
-        ; todo: search may freeze due to going outside the cluster buffer (and missing 0 byte)
-        call search_dir_entry
-        jz update_directory_entry__do_update
-
-        mov bx, [update_entry_structure+2]
-        call get_next_cluster_num
-        cmp bx, 0xfff
-        je update_directory_entry__not_found
-        cmp bx, 0xff0f
-        je update_directory_entry__not_found
-
-        jmp update_directory_entry__loop
+    mov bx, [update_entry_structure+2]
+    mov di, [update_entry_structure+4]
+    call locate_directory_entry
+    jnz update_directory_entry__not_found
 
     update_directory_entry__do_update:
         ; replace old 32-byte entry with new entry in the buffer
@@ -235,6 +225,99 @@ update_directory_entry:
 
     update_directory_entry__finish:
         pop_registers
+        ret
+
+
+fix_directory_length:
+    ; for a given directory path si, 
+    ; updates it's corresponding entry in a parent directory by increasing the length field
+
+    ; load entry's cluster, finds entry's address and cluster number
+    ; edit it's length field
+    ; write back fixed cluster content to disk
+    push_registers
+
+    ; copy original string pointed by si
+    mov di, parent_path_buffer
+    mov cx, 256
+    call copy_nbytes
+
+    ; split path into parent_path / child
+    mov si, parent_path_buffer
+    mov di, subdir_name_buffer
+    call get_parent
+
+    ; store starting cluster into bx
+    mov si, parent_path_buffer
+    call load_directory
+
+    mov di, subdir_name_buffer
+    call locate_directory_entry
+    jnz fix_directory_length__finish
+
+    ; update length in-memory (within cluster_buffer)
+    mov ax, [si+28]
+    mov cx, 32
+    add ax, cx
+    mov [si+28], ax
+
+    ; update disk cluster
+    call write_cluster
+
+    sub cx, cx ; set ZF (successs flag)
+
+    fix_directory_length__finish:
+        pop_registers
+        ret
+
+
+locate_directory_entry:
+    ; similar to search_dir_entry, but searches among all directory clusters
+    ; parameters:
+    ;   bx: starting cluster number
+    ;   di: target file name address
+    ; on success, cluster_buffer contains the target cluster,
+    ; also stores found entry's cluster in bx, target entry address in si
+    ; sets ZF
+
+    push ax
+    push cx
+    push dx
+    push di
+    
+    locate_directory_entry__loop:
+        push bx
+
+        call read_cluster
+        mov si, cluster_buffer
+        mov [directory_buffer_ptr], si
+        ; todo: search may freeze due to going outside the cluster buffer (and missing 0 byte)
+        call search_dir_entry
+        jz locate_directory_entry__found
+
+        call get_next_cluster_num
+
+        cmp bx, 0xfff
+        je locate_directory_entry__notfound
+        cmp bx, 0xff0f
+        je locate_directory_entry__notfound
+
+        pop cx ; dismiss bx
+        jmp locate_directory_entry__loop
+
+    locate_directory_entry__found:
+        pop bx
+        sub cx, cx
+        jmp locate_directory_entry__finish
+
+    locate_directory_entry__notfound:
+        or cx, 1 ; clear ZF
+
+    locate_directory_entry__finish:
+        pop di
+        pop dx
+        pop cx
+        pop ax
         ret
 
 

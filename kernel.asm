@@ -38,6 +38,7 @@ run_command:
     detect_command cmd_cat, run_command__cat
     detect_command cmd_ls, run_command__ls
     detect_command cmd_rename, run_command__rename
+    detect_command cmd_mkfile, run_command__mkfile
 
     jnz run_command__notfound
 
@@ -62,6 +63,10 @@ run_command:
 
     run_command__rename:
         call run_rename
+        jmp run_cat__finish
+
+    run_command__mkfile:
+        call run_mkfile
         jmp run_cat__finish
 
     run_command__notfound:
@@ -220,6 +225,24 @@ run_rename:
 
     run_rename__finish:
         ret
+
+
+run_mkfile:
+    mov si, buffer
+    add si, 7
+    call lstrip
+
+    mov di, path_buffer
+    mov cx, BUFFER_SIZE
+    call copy_nbytes
+
+    mov si, di
+
+    call to_upper_case
+    mov si, path_buffer
+
+    call create_file
+    ret
 
 
 file_viewer:

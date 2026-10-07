@@ -177,9 +177,10 @@ run_rename:
     call copy_nbytes
 
     ; check if parent directory is root directory
-    mov si, [path_buffer+1]
-    mov cx, 0
-    cmp [si], cx
+    mov si, path_buffer
+    call print_loop
+    mov cl, 0
+    cmp [si+1], cl
     je run_rename__root
 
     run_rename__non_root:
@@ -199,7 +200,6 @@ run_rename:
         ; provide old file name to find the entry
         mov si, file_name_buffer
         mov [update_entry_structure+4], si
-
 
         ; update the entry and write changes to disk
         call update_directory_entry

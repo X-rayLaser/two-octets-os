@@ -20,6 +20,28 @@ bits 16
 %endmacro
 
 
+%macro logical_sector_rw 1
+    push_registers
+
+    ; specify LBA disk address
+    call set_lba_address
+
+    ; specify # of physical sectors to process
+    call get_logical_sector_size
+    mov [daps+2], ax
+
+    ; specify buffer address
+    mov ax, sector_buffer
+    call set_transfer_buffer
+
+    call %1
+
+    ; todo: catch read error
+
+    pop_registers
+%endmacro
+
+
 get_cluster_remaining_space:
     ; compute unused space in bytes in the last file's cluster
     ; dx: total file size in bytes
@@ -177,5 +199,52 @@ write_disk_lba:
     pop si
     pop_dcba
     ret
+
+
+read_logical_sector:
+    ; loads ax-th logical sector to a memory buffer
+    logical_sector_rw read_disk_lba
+    ret
+
+
+write_logical_sector:
+    ; writes content of buffer to ax-th logical sector on disk
+    logical_sector_rw write_disk_lba
+    ret
+
+
+get_logical_sector_size:
+    ; store in ax the number of physical sectors per logical sector
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+
+    ; convert logical sector to physical
+    mov ah, 48h                   ; Get Drive Parameters
+    mov dl, [boot_drive]          ; Drive index
+    mov si, DISK_BUFFER_ADDRESS   ; response data structure address
+    int 13h
+
+    jc get_logical_sector_size__finish
+    mov cx, [DISK_BUFFER_ADDRESS + 18] ; bytes per physical sector
+    jmp get_logical_sector_size__finish
+
+    get_logical_sector_size__fallback:
+        mov cx, 512
+
+    get_logical_sector_size__finish:
+        xor dx, dx
+        mov ax, [0x7c00+0x00B] ; bytes per logical sector
+        div cx
+
+        pop di
+        pop si
+        pop dx
+        pop cx
+        pop bx
+        ret
+
 
 %endif

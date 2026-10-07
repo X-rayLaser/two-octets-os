@@ -109,6 +109,65 @@ load_subdir_entry:
     ret
 
 
+update_root_entry:
+    ; scan root directory to find target entry and replace it with a given buffer
+    ; si: buffer address
+    ; di: target file name address
+
+    push_registers
+
+    push si
+    push di
+
+    call sectors_per_rootdir
+    mov cx, ax
+
+    ; ax = first logical root sector
+    push cx
+    call first_rootdir_sector
+    pop cx
+
+    pop di
+
+    update_root_entry__loop:
+        ; check if we moved past the last root directory sector
+        cmp cx, 0
+        jle update_root_entry__notfound
+
+        ; todo: clear sector_buffer
+        ; load ax-th logical sector
+        call read_logical_sector
+
+        mov si, sector_buffer
+        mov [directory_buffer_ptr], si
+
+        call search_dir_entry
+        jz update_root_entry__do_update
+
+        inc ax ; check next sector in the next iteration
+        dec cx
+        jmp update_root_entry__loop
+
+    update_root_entry__do_update:
+        ; replace old 32-byte entry with new entry in the buffer
+        mov di, si ; di = start of old entry in sector_buffer
+        pop si     ; si = buffer with new entry data
+        mov cx, 32
+        call copy_nbytes
+
+        ; write in-memory updated sector (in sector_buffer) to ax-th logical disk sector
+        call write_logical_sector
+        sub cx, cx ; force set ZF
+
+        jmp update_root_entry__finish
+
+    update_root_entry__notfound:
+
+    update_root_entry__finish:
+        pop_registers
+        ret
+
+
 update_directory_entry:
     ; scan directory to find target entry and replace it with a given buffer
     ; update_entry_structure:
@@ -179,7 +238,7 @@ append_file:
 
         append_file__data_not_fits:
             call complete_cluster_and_advance
-            call complete_cluster_and_advance  
+            call create_and_goto_cluster  
             jmp append_file__loop
 
     append_file__finish:

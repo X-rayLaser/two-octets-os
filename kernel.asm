@@ -176,26 +176,42 @@ run_rename:
     mov di, new_dir_entry_buffer
     call copy_nbytes
 
-    ; provide address of a new entry
-    mov [update_entry_structure], di
+    ; check if parent directory is root directory
+    mov si, [path_buffer+1]
+    mov cx, 0
+    cmp [si], cx
+    je run_rename__root
 
-    ; load parent directory and get it's starting cluster number
-    mov si, path_buffer
-    call load_directory
-    jnz run_rename__error
+    run_rename__non_root:
+        ; handle editing non root directory entry
 
-    ; set cluster number of the directory whose entry needs update
-    mov [update_entry_structure+2], bx
+        ; provide address of a new entry
+        mov [update_entry_structure], di
 
-    ; provide old file name to find the entry
-    mov si, file_name_buffer
-    mov [update_entry_structure+4], si
+        ; load parent directory and get it's starting cluster number
+        mov si, path_buffer
+        call load_directory
+        jnz run_rename__error
+
+        ; set cluster number of the directory whose entry needs update
+        mov [update_entry_structure+2], bx
+
+        ; provide old file name to find the entry
+        mov si, file_name_buffer
+        mov [update_entry_structure+4], si
 
 
-    ; update the entry and write changes to disk
-    call update_directory_entry
+        ; update the entry and write changes to disk
+        call update_directory_entry
 
-    jmp run_rename__finish
+        jmp run_rename__finish
+
+    run_rename__root:
+        ; handle editing root directory entry
+        mov si, new_dir_entry_buffer
+        mov di, file_name_buffer
+        call update_root_entry
+        jmp run_rename__finish
 
     run_rename__error:
         mov si, file_not_found

@@ -222,12 +222,15 @@ get_logical_sector_size:
     push di
 
     ; convert logical sector to physical
+
+    push ax
     mov ah, 48h                   ; Get Drive Parameters
     mov dl, [boot_drive]          ; Drive index
     mov si, DISK_BUFFER_ADDRESS   ; response data structure address
     int 13h
+    pop ax
 
-    jc get_logical_sector_size__finish
+    jc get_logical_sector_size__fallback
     mov cx, [DISK_BUFFER_ADDRESS + 18] ; bytes per physical sector
     jmp get_logical_sector_size__finish
 

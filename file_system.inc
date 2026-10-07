@@ -157,15 +157,37 @@ update_root_entry:
 
         ; write in-memory updated sector (in sector_buffer) to ax-th logical disk sector
         call write_logical_sector
-        sub cx, cx ; force set ZF
+
+        ; reload the root directory
+        call read_root_directory
+
+        ; force set ZF
+        sub cx, cx
 
         jmp update_root_entry__finish
 
     update_root_entry__notfound:
+        or cx, 1 ; clear ZF
 
     update_root_entry__finish:
         pop_registers
         ret
+
+
+read_root_directory:
+    call first_rootdir_sector ; ax = starting sector of root directory
+    call set_lba_address
+
+    call sectors_per_rootdir ; ax = # sectors per root directory
+    mov [daps+2], ax
+
+    mov ax, ROOTDIR_ADDRESS
+    call set_transfer_buffer
+    call read_disk_lba
+
+    mov si, ROOTDIR_ADDRESS
+
+    ret
 
 
 update_directory_entry:

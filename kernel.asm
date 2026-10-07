@@ -178,7 +178,6 @@ run_rename:
 
     ; check if parent directory is root directory
     mov si, path_buffer
-    call print_loop
     mov cl, 0
     cmp [si+1], cl
     je run_rename__root
@@ -211,6 +210,8 @@ run_rename:
         mov si, new_dir_entry_buffer
         mov di, file_name_buffer
         call update_root_entry
+
+        jnz run_rename__error
         jmp run_rename__finish
 
     run_rename__error:

@@ -45,8 +45,8 @@ print_bpb:
 
 
 create_file:
-    push_registers
     ; path buffer contains address of a path of file to be created
+    push_registers
     mov si, path_buffer
     mov di, file_name_buffer
     call split_and_copy
@@ -55,6 +55,7 @@ create_file:
     ; get file's parent directory length and store it in dx
     call load_subdir_entry
     jnz create_file__error
+
     mov dx, [si+28] ; note: read first 2 bytes of 4-byte file length field
     push dx
 
@@ -75,9 +76,12 @@ create_file:
     mov [file_append_struct+2], bx
     mov [file_append_struct+4], cx
     mov [file_append_struct+6], dx
+
     call append_file
+    jnz create_file__error
 
     ; add 32 to the length field of parent of parent
+    mov si, path_buffer
     call fix_directory_length
     jz create_file__finish
 
@@ -104,15 +108,30 @@ load_subdir_entry:
     mov di, subdir_name_buffer
     call get_parent
 
+
+    mov si, subdir_name_buffer
+    call remove_trailing_slash
+    call fix_file_name
+
     mov si, parent_path_buffer
+
     call load_directory
+    jnz load_subdir_entry__error
 
     mov di, subdir_name_buffer
     call search_dir_entry
+    jnz load_subdir_entry__error
 
-    pop di
-    pop_dcba
-    ret
+    jmp load_subdir_entry__finish
+
+    load_subdir_entry__error:
+        mov si, msg_hello
+        call print_loop
+
+    load_subdir_entry__finish:
+        pop di
+        pop_dcba
+        ret
 
 
 update_root_entry:
@@ -247,8 +266,14 @@ fix_directory_length:
     mov di, subdir_name_buffer
     call get_parent
 
+    mov si, subdir_name_buffer
+    call remove_trailing_slash
+    call fix_file_name
+
+
     ; store starting cluster into bx
     mov si, parent_path_buffer
+
     call load_directory
 
     mov di, subdir_name_buffer
@@ -339,12 +364,17 @@ append_file:
 
         append_file__data_fits:
             call update_cluster
+            jnz append_file__update_error
             jmp append_file__finish
 
         append_file__data_not_fits:
             call complete_cluster_and_advance
             call create_and_goto_cluster  
             jmp append_file__loop
+
+    append_file__update_error:
+        mov si, msg_disk_error
+        call print_loop
 
     append_file__finish:
         pop_registers
@@ -358,9 +388,10 @@ configure_initial_file_update_structure:
     mov bx, [file_append_struct+2]
     call get_last_cluster
 
+
     ; copy one structure content to another
-    mov si, [file_append_struct]
-    mov di, [cluster_args_struct]
+    mov si, file_append_struct
+    mov di, cluster_args_struct
     mov cx, 8
     call copy_nbytes
 
@@ -460,7 +491,7 @@ allocate_cluster:
 
     mov si, FAT_ADDRESS
     add si, 3 ; skip first 2 entries (first 3 bytes)
-    mov bx, 0 ; contains cluster number
+    mov bx, 2 ; contains cluster number
 
     allocate_cluster__search:
         ; check even entry

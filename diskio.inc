@@ -136,6 +136,7 @@ update_cluster:
     jmp update_cluster__finish
 
     update_cluster__disk_error:
+        or cx, 1 ; clear ZF
 
     update_cluster__finish:
         pop di

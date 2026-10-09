@@ -242,7 +242,14 @@ run_mkfile:
     mov si, path_buffer
 
     call create_file
-    ret
+    jz run_mkfile__finish
+
+    run_mkfile__error:
+        mov si, file_not_found
+        call print_loop
+    
+    run_mkfile__finish:
+        ret
 
 
 file_viewer:

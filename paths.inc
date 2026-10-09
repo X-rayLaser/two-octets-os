@@ -132,6 +132,38 @@ ensure_trailing_slash:
         ret
 
 
+remove_trailing_slash:
+    ; si stores address of a string
+    push_registers
+
+    ; corner case: empty string
+    mov al, [si]
+    or al, al
+    jz remove_trailing_slash__finish
+
+    remove_trailing_slash__loop:
+        mov al, [si]
+        or al, al
+        jz remove_trailing_slash__string_end
+
+        inc si
+        jmp remove_trailing_slash__loop
+
+    remove_trailing_slash__string_end:
+        ; if last non-zero byte was /, replace it with 0
+        dec si
+        mov al, [si]
+        cmp al, '/'
+        jne remove_trailing_slash__finish
+
+        mov al, 0
+        mov [si], al
+
+    remove_trailing_slash__finish:
+        pop_registers
+        ret
+
+
 fix_file_name:
     ; pad the file name with white-spaces to be 8 bytes long
     ; pad the extension with white-spaces to be 3 bytes long
@@ -144,23 +176,30 @@ fix_file_name:
 
     jnz fix_file_name__found_dot
 
-    mov cx, 0
+    mov di, si
+    ; final address
+    add si, 11
 
     fix_file_name__nodot:
-        cmp cx, 11
-        jge fix_file_name__finish
-        
-        mov al, 0
-        cmp [si], al
-        jne fix_file_name__nopad
-        
-        mov al, ' '
-        mov [si], al
+        mov al, [di]
+        or al, al
+        jz fix_file_name__pad
 
-        fix_file_name__nopad:
-            inc cx
-            inc si
-            jmp fix_file_name__nodot
+        inc di
+        jmp fix_file_name__nodot
+
+    fix_file_name__pad:
+        cmp di, si
+        jge fix_file_name__add_null
+
+        mov al, ' '
+        stosb
+        jmp fix_file_name__pad
+
+    fix_file_name__add_null:
+        mov al, 0
+        mov [si], al
+        jmp fix_file_name__finish
 
     fix_file_name__found_dot:
         mov cx, 8

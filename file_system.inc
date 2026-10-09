@@ -52,12 +52,10 @@ create_file:
     call split_and_copy
     ; here path_buffer contains path to the file's parent directory
 
-    ; get file's parent directory length and store it in dx
-    call load_subdir_entry
+    ; get file's parent directory length and store it in cx
+    call get_directory_size
     jnz create_file__error
-
-    mov dx, [si+28] ; note: read first 2 bytes of 4-byte file length field
-    push dx
+    push cx
 
     call create_directory_entry
 
@@ -71,18 +69,14 @@ create_file:
     ; and persist it to disk
     mov si, new_dir_entry_buffer
     mov cx, 32
-    pop dx
     mov [file_append_struct], si
     mov [file_append_struct+2], bx
     mov [file_append_struct+4], cx
-    mov [file_append_struct+6], dx
+
+    pop cx
+    mov [file_append_struct+6], cx
 
     call append_file
-    jnz create_file__error
-
-    ; add 32 to the length field of parent of parent
-    mov si, path_buffer
-    call fix_directory_length
     jz create_file__finish
 
     create_file__error:
@@ -90,6 +84,43 @@ create_file:
 
     create_file__finish:
         pop_registers
+        ret
+
+
+get_directory_size:
+    ; si is the address of the directory path
+    ; cx will store the size of the directory in bytes
+
+    push ax
+    push bx
+    push dx
+    push si
+    push di
+
+    call load_directory
+    jnz get_directory_size__error
+
+    mov si, directory_buffer
+
+    mov cx, 0
+    get_directory_size__loop:
+        mov al, [si]
+        or al, al
+        jz get_directory_size__finish
+
+        add cx, 32
+        add si, 32
+        jmp get_directory_size__loop
+    
+    get_directory_size__error:
+        
+
+    get_directory_size__finish:
+        pop di
+        pop si
+        pop dx
+        pop bx
+        pop ax
         ret
 
 
@@ -122,11 +153,11 @@ load_subdir_entry:
     call search_dir_entry
     jnz load_subdir_entry__error
 
+    ; ZF already set
     jmp load_subdir_entry__finish
 
     load_subdir_entry__error:
-        mov si, msg_hello
-        call print_loop
+        ; ZF is already cleared
 
     load_subdir_entry__finish:
         pop di
@@ -355,12 +386,14 @@ append_file:
 
     append_file__loop:
         mov dx, [cluster_args_struct+6]
+
         call get_cluster_remaining_space  ; ax now stores remaining unused space in a cluster
 
         ; todo: verify modulo arithmetics for remainders > 255
         cmp ax, [file_append_struct+4]
 
         jl append_file__data_not_fits
+
 
         append_file__data_fits:
             call update_cluster
@@ -373,8 +406,7 @@ append_file:
             jmp append_file__loop
 
     append_file__update_error:
-        mov si, msg_disk_error
-        call print_loop
+        ;
 
     append_file__finish:
         pop_registers
@@ -384,16 +416,16 @@ append_file:
 configure_initial_file_update_structure:
     push_registers
 
-    ; find last cluster of the file
-    mov bx, [file_append_struct+2]
-    call get_last_cluster
-
-
     ; copy one structure content to another
     mov si, file_append_struct
     mov di, cluster_args_struct
     mov cx, 8
     call copy_nbytes
+
+    ; find last cluster of the file
+    mov bx, [file_append_struct+2]
+    call get_last_cluster
+    mov [cluster_args_struct+2], bx
 
     ; find byte offset of the first affected cluster
     call get_cluster_size

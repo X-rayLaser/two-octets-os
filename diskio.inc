@@ -59,7 +59,7 @@ get_cluster_remaining_space:
 
     ; bx now stores remaining unused space in a cluster
     sub cx, dx
-    mov ax, bx
+    mov ax, cx
 
     pop dx
     pop cx
@@ -94,6 +94,7 @@ get_cluster_size:
     ; store result in cx
     push ax
     push bx
+    push dx
 
     xor ax, ax
     mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
@@ -101,6 +102,7 @@ get_cluster_size:
     mul bx                 ; ax = bytes per cluster
     mov cx, ax
 
+    pop dx
     pop bx
     pop ax
     ret
@@ -121,13 +123,14 @@ update_cluster:
     push di
 
     mov si, [cluster_args_struct]
-    mov bx, [si+2]
+    mov bx, [cluster_args_struct+2]
     call read_cluster
+    jc update_cluster__disk_error
 
     mov di, cluster_buffer
 
-    mov cx, [si+4]
-    add di, [si+6]
+    mov cx, [cluster_args_struct+4]
+    add di, [cluster_args_struct+6]
     call copy_nbytes
 
     call write_disk_lba

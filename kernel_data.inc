@@ -46,6 +46,7 @@ cmd_cat  db "cat ", 0
 cmd_ls   db "ls ", 0
 cmd_rename db "rename", 0
 cmd_mkfile db "mkfile", 0
+cmd_mkdir db "mkdir", 0
 
 ; file viewer help
 viewer_help_scroll_down db "Press any key to scroll down", 13, 0

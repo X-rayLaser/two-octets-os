@@ -39,6 +39,7 @@ run_command:
     detect_command cmd_ls, run_command__ls
     detect_command cmd_rename, run_command__rename
     detect_command cmd_mkfile, run_command__mkfile
+    detect_command cmd_mkdir, run_command__mkdir
 
     jnz run_command__notfound
 
@@ -67,6 +68,10 @@ run_command:
 
     run_command__mkfile:
         call run_mkfile
+        jmp run_cat__finish
+
+    run_command__mkdir:
+        call run_mkdir
         jmp run_cat__finish
 
     run_command__notfound:
@@ -249,6 +254,31 @@ run_mkfile:
         call print_loop
     
     run_mkfile__finish:
+        ret
+
+
+run_mkdir:
+    mov si, buffer
+    add si, 6
+    call lstrip
+
+    mov di, path_buffer
+    mov cx, BUFFER_SIZE
+    call copy_nbytes
+
+    mov si, di
+
+    call to_upper_case
+    mov si, path_buffer
+
+    call create_directory
+    jz run_mkfile__finish
+
+    run_mkdir__error:
+        mov si, file_not_found
+        call print_loop
+    
+    run_mkdir__finish:
         ret
 
 

@@ -29,6 +29,46 @@ bits 16
 %endmacro
 
 
+%macro create_file_prolog 1
+    ; param 1: error handling label
+
+    mov si, path_buffer
+    mov di, file_name_buffer
+    call split_and_copy
+    ; here path_buffer contains path to the file's parent directory
+
+    ; get file's parent directory length and store it in cx
+    call get_directory_size
+    jnz %1
+    push cx
+
+    call create_directory_entry
+%endmacro
+
+%macro create_file_epilog 1
+    ; param 1: error handling label
+
+    ; todo: handle corner case of creating files in the root directory, e.g. /filename
+    ; store the cluster number of the file's parent directory in bx
+    mov si, path_buffer
+    call load_directory
+    jnz %1
+
+    ; treat directory like file and append to it 32-bytes entry corresponding to a new file
+    ; and persist it to disk
+    mov si, new_dir_entry_buffer
+    mov cx, 32
+    mov [file_append_struct], si
+    mov [file_append_struct+2], bx
+    mov [file_append_struct+4], cx
+
+    pop cx
+    mov [file_append_struct+6], cx
+
+    call append_file
+%endmacro
+
+
 print_bpb:
     mov si, 0x7c00+0x00B
 
@@ -47,42 +87,35 @@ print_bpb:
 create_file:
     ; path buffer contains address of a path of file to be created
     push_registers
-    mov si, path_buffer
-    mov di, file_name_buffer
-    call split_and_copy
-    ; here path_buffer contains path to the file's parent directory
-
-    ; get file's parent directory length and store it in cx
-    call get_directory_size
-    jnz create_file__error
-    push cx
-
-    call create_directory_entry
-
-    ; todo: handle corner case of creating files in the root directory, e.g. /filename
-    ; store the cluster number of the file's parent directory in bx
-    mov si, path_buffer
-    call load_directory
-    jnz create_file__error
-
-    ; treat directory like file and append to it 32-bytes entry corresponding to a new file
-    ; and persist it to disk
-    mov si, new_dir_entry_buffer
-    mov cx, 32
-    mov [file_append_struct], si
-    mov [file_append_struct+2], bx
-    mov [file_append_struct+4], cx
-
-    pop cx
-    mov [file_append_struct+6], cx
-
-    call append_file
+    create_file_prolog create_file__error
+    create_file_epilog create_file__error
     jz create_file__finish
 
     create_file__error:
         or cx, 1 ; clear ZF
 
     create_file__finish:
+        pop_registers
+        ret
+
+
+create_directory:
+    ; path buffer contains address of a path of directory to be created
+    push_registers
+    create_file_prolog create_directory__error
+
+    push ax
+    mov al, 0x10
+    mov [new_dir_entry_buffer+11], al
+    pop ax
+
+    create_file_epilog create_directory__error
+    jz create_directory__finish
+
+    create_directory__error:
+        or cx, 1 ; clear ZF
+
+    create_directory__finish:
         pop_registers
         ret
 

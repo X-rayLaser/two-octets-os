@@ -67,28 +67,6 @@ get_cluster_remaining_space:
     ret
 
 
-get_last_cluster:
-    ; find the last cluster in the chain
-    ; accepts initial cluster number bx
-    ; updates bx with number of found cluster
-
-    get_last_cluster__loop:
-        push bx ; memorize current cluster number
-        call get_next_cluster_num
-
-        cmp bx, 0xfff
-        je get_last_cluster__finish
-        cmp bx, 0xff0f
-        je get_last_cluster__finish
-
-        pop cx ; forget it
-        jmp get_last_cluster__loop
-
-    get_last_cluster__finish:
-        pop bx ; result
-        ret
-
-
 get_cluster_size:
     ; compute total cluster size in bytes
     ; store result in cx

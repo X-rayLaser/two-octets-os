@@ -655,48 +655,19 @@ chain_cluster:
 
 
 clear_cluster:
-    push_abcd
-    push si
-    push di
     ; fill the cluster bx with zeros
+    push_registers
 
-    ; set number of sectors to transfer to equal cluster size (in sectors)
-    xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
-    mov [daps+2], ax
+    ; copy 4096 zeros to cluster_buffer
+    mov si, null_buffer
+    mov di, cluster_buffer
+    mov cx, 4096
+    call copy_nbytes
 
-    ; ax = (bx - 2) * cluster size
-    dec bx
-    dec bx
-    xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
-    mul bx                 ; ax = offset of cluster's first sector
+    ; write cluster_buffer to disk
+    call write_cluster
 
-    push ax
-
-    ; ax = first_rootdir_sector + sectors_per_rootdir = first cluster sector number
-    call first_rootdir_sector ; -> ax
-    mov cx, ax
-    call sectors_per_rootdir ; -> ax
-    add ax, cx
-
-    pop cx ; restore ax (cluster's offset) to cx
-    add ax, cx
-
-    call set_lba_address
-
-    mov ax, null_buffer
-    call set_transfer_buffer
-
-    ; issuing BIOS interrupt for writing disk sectors using LBA addressing
-    mov ah, 0x43
-    mov dl, [boot_drive] ; set drive number to boot drive
-    mov si, daps         ; pass an address of data structure before BIOS call
-    int 0x13
-
-    pop di
-    pop si
-    pop_dcba
+    pop_registers
     ret
 
 

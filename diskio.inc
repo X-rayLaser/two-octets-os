@@ -183,6 +183,23 @@ write_disk_lba:
     ret
 
 
+clear_cluster:
+    ; fill the cluster bx with zeros
+    push_registers
+
+    ; copy 4096 zeros to cluster_buffer
+    mov si, null_buffer
+    mov di, cluster_buffer
+    mov cx, 4096
+    call copy_nbytes
+
+    ; write cluster_buffer to disk
+    call write_cluster
+
+    pop_registers
+    ret
+
+
 read_logical_sector:
     ; loads ax-th logical sector to a memory buffer
     logical_sector_rw read_disk_lba

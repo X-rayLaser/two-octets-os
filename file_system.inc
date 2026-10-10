@@ -545,23 +545,6 @@ create_directory_entry:
     ret
 
 
-clear_cluster:
-    ; fill the cluster bx with zeros
-    push_registers
-
-    ; copy 4096 zeros to cluster_buffer
-    mov si, null_buffer
-    mov di, cluster_buffer
-    mov cx, 4096
-    call copy_nbytes
-
-    ; write cluster_buffer to disk
-    call write_cluster
-
-    pop_registers
-    ret
-
-
 search_dir_entry:
     ; on success, sets ZF and sets si to the address of the target entry containing filename di
     push_abcd

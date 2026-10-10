@@ -153,5 +153,78 @@ fs_rename:
         ret
 
 
+fs_mkfile:
+    ; si is address of path
+    mov di, path_buffer
+    mov cx, BUFFER_SIZE
+    call copy_nbytes
+
+    mov si, di
+
+    call to_upper_case
+    mov si, path_buffer
+
+    call create_file
+    jz fs_mkfile__finish
+
+    fs_mkfile__error:
+        mov si, file_not_found
+        call print_loop
+    
+    fs_mkfile__finish:
+        ret
+
+
+fs_mkdir:
+    ; si is address of path
+    mov di, path_buffer
+    mov cx, BUFFER_SIZE
+    call copy_nbytes
+
+    mov si, di
+
+    call to_upper_case
+    mov si, path_buffer
+
+    call create_directory
+    jz fs_mkdir__finish
+
+    fs_mkdir__error:
+        mov si, file_not_found
+        call print_loop
+    
+    fs_mkdir__finish:
+        ret
+
+
+fs_cat:
+    ; si is address of path
+    mov di, path_buffer
+    mov cx, BUFFER_SIZE
+    call copy_nbytes
+
+    mov si, di
+
+    call to_upper_case
+    mov si, path_buffer
+
+    call find_file
+
+    jnz fs_cat__notfound
+
+    mov bx, [si+26]
+    mov di, file_buffer
+    mov [data_offset], di
+    call load_file
+    mov si, file_buffer
+    call file_viewer
+    jmp fs_cat__finish
+
+    fs_cat__notfound:
+        mov si, file_not_found
+        call print_loop
+
+    fs_cat__finish:
+        ret
 
 %endif

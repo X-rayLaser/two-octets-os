@@ -64,15 +64,15 @@ run_command:
 
     run_command__rename:
         call run_rename
-        jmp run_cat__finish
+        jmp run_command__finish
 
     run_command__mkfile:
         call run_mkfile
-        jmp run_cat__finish
+        jmp run_command__finish
 
     run_command__mkdir:
         call run_mkdir
-        jmp run_cat__finish
+        jmp run_command__finish
 
     run_command__notfound:
         mov si, cmd_notfound
@@ -86,34 +86,8 @@ run_cat:
     mov si, buffer
     add si, 4
     call lstrip
-
-    mov di, path_buffer
-    mov cx, BUFFER_SIZE
-    call copy_nbytes
-
-    mov si, di
-
-    call to_upper_case
-    mov si, path_buffer
-
-    call find_file
-
-    jnz run_cat__notfound
-
-    mov bx, [si+26]
-    mov di, file_buffer
-    mov [data_offset], di
-    call load_file
-    mov si, file_buffer
-    call file_viewer
-    jmp run_cat__finish
-
-    run_cat__notfound:
-        mov si, file_not_found
-        call print_loop
-
-    run_cat__finish:
-        ret
+    call fs_cat
+    ret
 
 
 run_ls:
@@ -136,183 +110,20 @@ run_mkfile:
     mov si, buffer
     add si, 7
     call lstrip
-
-    mov di, path_buffer
-    mov cx, BUFFER_SIZE
-    call copy_nbytes
-
-    mov si, di
-
-    call to_upper_case
-    mov si, path_buffer
-
-    call create_file
-    jz run_mkfile__finish
-
-    run_mkfile__error:
-        mov si, file_not_found
-        call print_loop
-    
-    run_mkfile__finish:
-        ret
+    call fs_mkfile
+    ret
 
 
 run_mkdir:
     mov si, buffer
     add si, 6
     call lstrip
-
-    mov di, path_buffer
-    mov cx, BUFFER_SIZE
-    call copy_nbytes
-
-    mov si, di
-
-    call to_upper_case
-    mov si, path_buffer
-
-    call create_directory
-    jz run_mkfile__finish
-
-    run_mkdir__error:
-        mov si, file_not_found
-        call print_loop
-    
-    run_mkdir__finish:
-        ret
-
-
-file_viewer:
-
-    file_viewer__loop:
-        mov al, [si]
-        or al, al
-        jz file_viewer__finish
-        call show_page
-
-        push si
-        mov si, viewer_help_scroll_down
-        call print_loop
-        call get_char
-        call clear_help_line
-        pop si
-        jmp file_viewer__loop
-
-    file_viewer__finish:
-        ret
-
-
-clear_help_line:
-    push ax
-    push cx
-    
-    clear_help_line__loop:
-        mov al, 80
-        cmp cl, al
-        je clear_help_line__finish
-
-        mov al, ' '
-        call print_char
-        inc cl
-        jmp clear_help_line__loop
-
-    clear_help_line__finish:
-        mov al, 13
-        call print_char
-        pop cx
-        pop ax
-        ret
-
-
-show_page:
-    ; si = start of first byte that belongs to the page
-    mov cx, 0
-
-    show_page__loop:
-        mov ax, 24
-        cmp cx, ax
-        je show_page__finish
-
-        mov al, [si]
-        or al, al
-        jz show_page__finish
-
-        call read_file_line
-        inc cx
-
-        push si
-        mov si, buffer
-        call print_loop
-        call carriage_return
-        pop si
-
-        jmp show_page__loop
-
-    show_page__finish:
-        ret
-
-
-read_file_line:
-    push_abcd
-    push di
-
-    mov cx, 0
-
-    push si
-
-    read_file_line__loop:
-        call is_newline
-        jz read_file_line__line_end
-
-        ; consider every w char sequence (without newline character) a line
-        ; where w is display width
-        mov ax, 80
-        cmp cx, ax
-        je read_file_line__line_end
-
-        mov al, [si]
-        or al, al
-        jz read_file_line__line_end
-
-        inc cx
-        inc si
-
-        jmp read_file_line__loop
-
-    read_file_line__line_end:
-        mov dx, si ; preserve next line address
-        pop si
-
-
-        mov di, buffer
-        call clear_buffer
-        call copy_nbytes
-        mov si, dx ; restore next line address
-
-    read_file_line__finish:
-        pop di
-        pop_dcba
-        ret
-
-
-is_newline:
-    mov al, 10
-    cmp [si], al
-    jne is_newline__notfound
-
-    is_newline__found:
-        inc si
-        and al, 0
-        jmp is_newline__finish
-
-    is_newline__notfound:
-        or al, 1
-
-    is_newline__finish:
-        ret
+    call fs_mkdir
+    ret
 
 
 %include "file_system.inc"
+%include "file_viewer.inc"
 %include "dirs.inc"
 %include "fat.inc"
 %include "paths.inc"

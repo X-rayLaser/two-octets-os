@@ -1,33 +1,8 @@
 bits 16
-%ifndef file_system
-%define file_system
+%ifndef dirs
+%define dirs
 
 %include "constants.inc"
-
-%macro print_bpb_field 2
-    push si
-    mov si, %1
-    call print_loop
-    pop si
-
-    xor ax, ax
-    %2
-    
-    push si
-
-    push ax
-    mov di, buffer
-    call clear_buffer
-
-    pop ax
-    call itos
-    mov si, buffer
-    call print_loop
-
-    pop si
-    call carriage_return
-%endmacro
-
 
 %macro create_file_prolog 1
     ; param 1: error handling label
@@ -67,21 +42,6 @@ bits 16
 
     call append_file
 %endmacro
-
-
-print_bpb:
-    mov si, 0x7c00+0x00B
-
-    print_bpb_field lbl_bytes_per_sector, lodsw
-    print_bpb_field lbl_sectors_per_cluster, lodsb
-    print_bpb_field lbl_reserved_sectors, lodsw
-    print_bpb_field lbl_fats, lodsb
-    print_bpb_field lbl_root_entries, lodsw
-    print_bpb_field lbl_total_sectors, lodsw
-    print_bpb_field lbl_media, lodsb
-    print_bpb_field lbl_fat_size, lodsw
-    
-    ret
 
 
 create_file:

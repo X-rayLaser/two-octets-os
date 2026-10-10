@@ -1,3 +1,7 @@
+bits 16
+%ifndef fat
+%define fat
+
 
 allocate_cluster:
     ; find a FAT entry containing the next free unused cluster,
@@ -128,3 +132,5 @@ get_last_cluster:
     get_last_cluster__finish:
         pop bx ; result
         ret
+
+%endif

@@ -120,116 +120,16 @@ run_ls:
     mov si, buffer
     add si, 3
     call lstrip
-
-    mov di, path_buffer
-    mov cx, BUFFER_SIZE
-    call copy_nbytes
-
-    mov si, di
-
-    call to_upper_case
-
-    call load_directory
-    jnz run_ls__maybe_file ; if it fails, the path may refer to a file rather than a directory
-
-    mov si, [directory_buffer_ptr]
-    call print_directory
-    jmp run_ls__finish
-
-    run_ls__maybe_file:
-        mov si, path_buffer
-
-        call find_file
-
-        jnz run_ls__notfound ; we have case here that parent directory exists, but there is no target file in it
-
-        ; file entry found, display it
-        call print_directory_entry
-
-        jmp run_ls__finish
-
-    run_ls__notfound:
-        mov si, file_not_found
-        call print_loop
-
-    run_ls__finish:
-        ret
+    call fs_list
+    ret
 
 
 run_rename:
     mov si, buffer
     add si, 7
     call lstrip
-
-    mov di, path_buffer
-    mov cx, BUFFER_SIZE
-    call copy_nbytes
-
-    mov si, di
-
-    call to_upper_case
-    mov si, path_buffer
-
-    ; retrieve into new temp buffer an entry of the file to be renamed
-    call find_file ; file entry -> si
-    jnz run_rename__error
-
-    mov cx, 32
-    mov di, new_dir_entry_buffer
-    call copy_nbytes
-
-    ; prepare new file name and replace old file name with it (in-memory)
-    mov si, new_file_name_buffer
-    call to_upper_case
-    call fix_file_name
-    mov cx, 11
-    mov di, new_dir_entry_buffer
-    call copy_nbytes
-
-    ; check if parent directory is root directory
-    mov si, path_buffer
-    mov cl, 0
-    cmp [si+1], cl
-    je run_rename__root
-
-    run_rename__non_root:
-        ; handle editing non root directory entry
-
-        ; provide address of a new entry
-        mov [update_entry_structure], di
-
-        ; load parent directory and get it's starting cluster number
-        mov si, path_buffer
-        call load_directory
-        jnz run_rename__error
-
-        ; set cluster number of the directory whose entry needs update
-        mov [update_entry_structure+2], bx
-
-        ; provide old file name to find the entry
-        mov si, file_name_buffer
-        mov [update_entry_structure+4], si
-
-        ; update the entry and write changes to disk
-        call update_directory_entry
-
-        jmp run_rename__finish
-
-    run_rename__root:
-        ; handle editing root directory entry
-        mov si, new_dir_entry_buffer
-        mov di, file_name_buffer
-        call update_root_entry
-
-        jnz run_rename__error
-        jmp run_rename__finish
-
-    run_rename__error:
-        mov si, file_not_found
-        call print_loop
-
-    run_rename__finish:
-        ret
+    call fs_rename
+    ret
 
 
 run_mkfile:
@@ -412,6 +312,7 @@ is_newline:
         ret
 
 
+%include "file_system.inc"
 %include "dirs.inc"
 %include "fat.inc"
 %include "paths.inc"

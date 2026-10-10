@@ -527,6 +527,7 @@ create_directory_entry:
     push di
 
     mov si, file_name_buffer
+    call remove_trailing_slash
     call fix_file_name
 
     call allocate_cluster ; new cluster number -> bx

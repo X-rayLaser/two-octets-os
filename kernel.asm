@@ -412,7 +412,7 @@ is_newline:
         ret
 
 
-%include "file_system.inc"
+%include "dirs.inc"
 %include "fat.inc"
 %include "paths.inc"
 %include "strings.inc"

@@ -59,4 +59,6 @@ update_entry_structure times 8 db 0
 cluster_buffer times 4096 db 0 ; buffer for storing cluster data in memory
 sector_buffer times 2048 db 0  ; buffer for storing sector data in memory
 
+heap_space times TOTAL_HEAP_SIZE db 0 ; space for the heap
+
 %endif

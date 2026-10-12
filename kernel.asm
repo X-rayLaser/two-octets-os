@@ -20,6 +20,7 @@ jmp shell_loop
 %include "diskio.inc"
 %include "strio.inc"
 %include "misc.inc"
+%include "heap.inc"
 %include "boot_util.inc"
 
 %include "kernel_data.inc"

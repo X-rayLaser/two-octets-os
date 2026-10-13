@@ -124,25 +124,23 @@ load_subdir_entry:
     push_abcd
     push di
 
-    mov di, parent_path_buffer
-    mov cx, 256
-    call copy_nbytes
+    ; split path into parent (si) / child (di)
+    call split_and_copy_new
 
-    mov si, parent_path_buffer
-    mov di, subdir_name_buffer
-    call get_parent
-
-
-    mov si, subdir_name_buffer
+    ; fix child
+    push si
+    mov si, di
     call remove_trailing_slash
     call fix_file_name
+    pop si
 
-    mov si, parent_path_buffer
-
+    push si
+    push di
     call load_directory
+    pop di
+    pop si
     jnz load_subdir_entry__error
 
-    mov di, subdir_name_buffer
     call search_dir_entry
     jnz load_subdir_entry__error
 
@@ -280,28 +278,22 @@ fix_directory_length:
     ; write back fixed cluster content to disk
     push_registers
 
-    ; copy original string pointed by si
-    mov di, parent_path_buffer
-    mov cx, 256
-    call copy_nbytes
+    ; split path into parent_path (si) / child (di)
+    call split_and_copy_new
 
-    ; split path into parent_path / child
-    mov si, parent_path_buffer
-    mov di, subdir_name_buffer
-    call get_parent
-
-    mov si, subdir_name_buffer
+    push si
+    mov si, di
     call remove_trailing_slash
     call fix_file_name
-
+    pop si
 
     ; store starting cluster into bx
-    mov si, parent_path_buffer
-
+    push si
+    push di
     call load_directory
-
-    mov di, subdir_name_buffer
     call locate_directory_entry
+    pop di
+    pop si
     jnz fix_directory_length__finish
 
     ; update length in-memory (within cluster_buffer)

@@ -12,6 +12,22 @@ get_parent:
     ret
 
 
+split_and_copy_new:
+    ; returns
+    ;   si: address of newly created parent path
+    ;   di: address of newly created child name
+    push_abcd
+    call copy_string ; di -> copy
+
+    mov si, di
+    mov cx, 32
+    call heap_alloc  ; di -> new_buffer
+    call split_and_copy
+
+    pop_dcba
+    ret
+
+
 split_and_copy:
     ; similar to split_path, but copy the final segment into address given by di
     ; and truncate the preceding part of string (si) in place

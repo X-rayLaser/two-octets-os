@@ -96,6 +96,39 @@ starts_with:
         ret
 
 
+copy_string:
+    ; create a new buffer and copy si string to it
+    ; di stores the address of a buffer
+    push_abcd
+    push si
+
+    call get_string_length
+    call heap_alloc        ; new buffer -> di
+    call copy_nbytes       ; copy si -> di
+
+    pop si
+    pop_dcba
+    ret
+
+
+get_string_length:
+    ; returns cx, length of the string counting null terminator
+    push si
+    
+    mov cx, 0
+
+    get_string_length__loop:
+        inc cx
+        lodsb
+        or al, al
+        jz get_string_length__finish
+        jmp get_string_length__loop
+
+    get_string_length__finish:
+        pop si
+        ret
+
+
 copy_nbytes:
     ; copy up to cx bytes from source string (si) to destination string (di)
 

@@ -183,6 +183,10 @@ get_next_arg:
         jmp get_next_arg__loop
 
     get_next_arg__finish:
+        ; null terminator
+        mov al, 0
+        stosb
+
         pop ax ; restore di pushed earlier to ax
 
         pop di

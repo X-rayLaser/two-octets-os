@@ -56,6 +56,8 @@ cluster_args_struct times 8 db 0 ; data structure storing arguments to update_cl
 update_entry_structure times 8 db 0 
 ; data buffer address | cluster number | count | byte offset within cluster
 
+argv_pointers times 64 db 0
+
 cluster_buffer times 4096 db 0 ; buffer for storing cluster data in memory
 sector_buffer times 2048 db 0  ; buffer for storing sector data in memory
 

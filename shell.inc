@@ -44,9 +44,14 @@ run_command:
 
     run_command__echo:
         mov si, buffer
-        add si, 4 ; print everything in the buffer past "echo"
-        call lstrip
+        call split_args
+        mov si, [argv_pointers+0]
         call print_loop
+        mov si, [argv_pointers+2]
+        call print_loop
+        mov si, [argv_pointers+4]
+        call print_loop
+
         jmp run_command__finish
 
     run_command__cat:
@@ -115,5 +120,67 @@ run_mkdir:
     call lstrip
     call fs_mkdir
     ret
+
+
+split_args:
+    ; si should be the address of an argument string
+    ; on success di points on the end of the array
+    push_abcd
+    push si
+
+    mov di, argv_pointers
+
+    split_args__loop:
+        ; removing leading spaces
+        call lstrip
+
+        ; check end of string
+        mov al, 0
+        cmp [si], al
+        je split_args__finish
+
+        ; get next argument and append it's address to a argv array of pointers
+        call get_next_arg
+        stosw
+
+        jmp split_args__loop
+    
+    split_args__finish:
+        pop si
+        pop_dcba
+        ret
+
+
+get_next_arg:
+    ; extract the next argument (part of string wrapped by whitespaces) in the string 
+    ; into a buffer and stores it's address in ax
+    ; si points to the next character after the argument (whitespace or 0)
+    
+    push cx
+    push di
+
+    mov cx, 256
+    call heap_alloc
+    push di
+
+    get_next_arg__loop:
+        mov al, ' '
+        cmp [si], al
+        je get_next_arg__finish
+
+        mov al, 0
+        cmp [si], al
+        je get_next_arg__finish
+
+        lodsb
+        stosb
+        jmp get_next_arg__loop
+
+    get_next_arg__finish:
+        pop ax ; restore di pushed earlier to ax
+
+        pop di
+        pop cx
+        ret
 
 %endif

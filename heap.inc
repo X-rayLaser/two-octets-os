@@ -18,10 +18,10 @@ heap_init:
 
 heap_alloc:
     ; allocate a block of cx bytes on the heap and fill it with zeros
-    ; on success, stores address of the allocated block (past the 4-byte header) in si
+    ; on success, stores address of the allocated block (past the 4-byte header) in di
     ; and sets ZF
     push_abcd
-    push di
+    push si
     mov si, heap_space
 
     ; include the overhead of 4 bytes into the size of carved out block
@@ -60,7 +60,8 @@ heap_alloc:
         or ax, 1 ; clear ZF
     
     heap_alloc__finish:
-        pop di
+        mov di, si
+        pop si
         pop_dcba
         ret
 

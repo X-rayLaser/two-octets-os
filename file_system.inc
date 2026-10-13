@@ -100,7 +100,8 @@ fs_rename:
     call copy_nbytes
 
     ; prepare new file name and replace old file name with it (in-memory)
-    mov si, new_file_name_buffer
+
+    mov si, [argv_pointers+4]
     call to_upper_case
     call fix_file_name
     mov cx, 11

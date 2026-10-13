@@ -6,8 +6,11 @@ bits 16
     ; arg1: match string
     ; arg2: address of command to run
     mov si, %1
+    mov ax, %2
+    push_registers
     call starts_with
-    jz %2
+    pop_registers
+    jz get_command_address__finish
 %endmacro
 
 
@@ -22,57 +25,21 @@ shell_loop:
 
     call carriage_return
 
-
     call heap_init ; reset the heap
     jmp shell_loop
 
 
 run_command:
-    mov di, buffer
+    mov si, buffer
+    call split_args
+    call get_command_address
 
-    detect_command cmd_fsinfo, run_command__fsinfo
-    detect_command cmd_echo, run_command__echo
-    detect_command cmd_cat, run_command__cat
-    detect_command cmd_ls, run_command__ls
-    detect_command cmd_rename, run_command__rename
-    detect_command cmd_mkfile, run_command__mkfile
-    detect_command cmd_mkdir, run_command__mkdir
+    mov si, ax
+    or ax, ax
+    jz run_command__notfound
 
-    jnz run_command__notfound
-
-    run_command__fsinfo:
-        call print_bpb
-        jmp run_command__finish
-
-    run_command__echo:
-        mov si, buffer
-        call split_args
-
-        push di
-        call run_echo
-        pop di
-        call free_argv
-        jmp run_command__finish
-
-    run_command__cat:
-        call run_cat
-        jmp run_command__finish
-
-    run_command__ls:
-        call run_ls
-        jmp run_command__finish
-
-    run_command__rename:
-        call run_rename
-        jmp run_command__finish
-
-    run_command__mkfile:
-        call run_mkfile
-        jmp run_command__finish
-
-    run_command__mkdir:
-        call run_mkdir
-        jmp run_command__finish
+    call si
+    jmp run_command__finish
 
     run_command__notfound:
         mov si, cmd_notfound
@@ -82,8 +49,35 @@ run_command:
         ret
 
 
+get_command_address:
+    push si
+    push di
+    mov di, buffer
+    
+    detect_command cmd_fsinfo, run_fsinfo
+    detect_command cmd_echo, run_echo
+    detect_command cmd_cat, run_cat
+    detect_command cmd_ls, run_ls
+    detect_command cmd_rename, run_rename
+    detect_command cmd_mkfile, run_mkfile
+    detect_command cmd_mkdir, run_mkdir
+
+    get_command_address__not_found:
+        mov ax, 0
+
+    get_command_address__finish:
+        pop di
+        pop si
+        ret
+
+
+run_fsinfo:
+    call print_bpb
+    ret
+
+
 run_echo:
-    mov si, argv_pointers
+    mov si, argv_pointers+2
 
     run_echo__loop:
         cmp si, di
@@ -105,41 +99,31 @@ run_echo:
 
 
 run_cat:
-    mov si, buffer
-    add si, 4
-    call lstrip
+    mov si, [argv_pointers+2]
     call fs_cat
     ret
 
 
 run_ls:
-    mov si, buffer
-    add si, 3
-    call lstrip
+    mov si, [argv_pointers+2]
     call fs_list
     ret
 
 
 run_rename:
-    mov si, buffer
-    add si, 7
-    call lstrip
+    mov si, [argv_pointers+2]
     call fs_rename
     ret
 
 
 run_mkfile:
-    mov si, buffer
-    add si, 7
-    call lstrip
+    mov si, [argv_pointers+2]
     call fs_mkfile
     ret
 
 
 run_mkdir:
-    mov si, buffer
-    add si, 6
-    call lstrip
+    mov si, [argv_pointers+2]
     call fs_mkdir
     ret
 

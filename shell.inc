@@ -22,6 +22,8 @@ shell_loop:
 
     call carriage_return
 
+
+    call heap_init ; reset the heap
     jmp shell_loop
 
 
@@ -45,13 +47,11 @@ run_command:
     run_command__echo:
         mov si, buffer
         call split_args
-        mov si, [argv_pointers+0]
-        call print_loop
-        mov si, [argv_pointers+2]
-        call print_loop
-        mov si, [argv_pointers+4]
-        call print_loop
 
+        push di
+        call run_echo
+        pop di
+        call free_argv
         jmp run_command__finish
 
     run_command__cat:
@@ -79,6 +79,28 @@ run_command:
         call print_loop
 
     run_command__finish:
+        ret
+
+
+run_echo:
+    mov si, argv_pointers
+
+    run_echo__loop:
+        cmp si, di
+        jge run_echo__finish
+
+        ; load next arg address
+        lodsw
+        push si
+        mov si, ax
+        call print_loop
+        mov al, ' '
+        call print_char
+        pop si
+
+        jmp run_echo__loop
+
+    run_echo__finish:
         ret
 
 
@@ -181,6 +203,27 @@ get_next_arg:
 
         pop di
         pop cx
+        ret
+
+
+free_argv:
+    ; di is the address of end of argv
+
+    mov si, argv_pointers
+
+    free_args__loop:
+        cmp si, di
+        jge free_argv__finish
+
+        lodsw
+        push si
+        mov si, ax
+        call heap_free
+        pop si
+
+        jmp free_args__loop
+
+    free_argv__finish:
         ret
 
 %endif

@@ -29,7 +29,7 @@ lstrip:
 to_upper_case:
     ; convert ascii string (with si starting address) letters to be in upper case
     ; in-place operation
-    push si
+    push_registers
 
     to_upper_case__loop:
         mov al, [si]
@@ -57,7 +57,7 @@ to_upper_case:
             jmp to_upper_case__loop
 
     to_upper_case__finish:
-        pop si
+        pop_registers
         ret
 
 

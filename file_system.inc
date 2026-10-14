@@ -45,11 +45,11 @@ print_bpb:
 
 fs_list:
     ; si is address of path
-    mov di, path_buffer
-    mov cx, BUFFER_SIZE
-    call copy_nbytes
+    allocate_frame 2
 
+    call copy_string   ; di -> path copy
     mov si, di
+    mov [bp], di
 
     call to_upper_case
 
@@ -61,7 +61,7 @@ fs_list:
     jmp fs_list__finish
 
     fs_list__maybe_file:
-        mov si, path_buffer
+        mov si, [bp]             ; restore path copy address to si
 
         call find_file
 
@@ -77,6 +77,9 @@ fs_list:
         call print_loop
 
     fs_list__finish:
+        mov si, [bp]
+        call heap_free
+        erase_frame 2
         ret
 
 

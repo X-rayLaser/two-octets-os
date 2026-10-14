@@ -702,8 +702,9 @@ print_root_directory:
 
 
 print_directory:
+
+    push_registers
     jc print_directory__error
-    push si
 
     print_directory__print_entry:
         mov al, [si]
@@ -724,13 +725,12 @@ print_directory:
         call print_loop
 
     print_directory__finish:
-        pop si
+        pop_registers
         ret
 
 
 print_directory_entry:
-    push_abcd
-    push si
+    push_registers
     
     mov di, buffer
     call clear_buffer
@@ -772,8 +772,7 @@ print_directory_entry:
         mov si, buffer
         call print_loop
 
-        pop si
-        pop_dcba
+        pop_registers
         ret
 
 %endif

@@ -43,3 +43,17 @@
     pop si
     pop_dcba
 %endmacro
+
+
+; note: this is not conventional pattern, but it allows to access i-th variable of the frame
+; using 0-based offsets with a nice expression like [bp+2*i]
+%macro allocate_frame 1
+    push bp
+    sub sp, %1
+    mov bp, sp
+%endmacro
+
+%macro erase_frame 1
+    add sp, %1
+    pop bp
+%endmacro

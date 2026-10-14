@@ -144,6 +144,8 @@ load_subdir_entry:
     call search_dir_entry
     jnz load_subdir_entry__error
 
+    ; todo: free allocated memory
+
     ; ZF already set
     jmp load_subdir_entry__finish
 
@@ -288,13 +290,12 @@ fix_directory_length:
     pop si
 
     ; store starting cluster into bx
-    push si
-    push di
     call load_directory
+
     call locate_directory_entry
-    pop di
-    pop si
     jnz fix_directory_length__finish
+
+    ; todo: free allocated memory
 
     ; update length in-memory (within cluster_buffer)
     mov ax, [si+28]
@@ -561,6 +562,12 @@ find_file:
 
 
 load_directory:
+    push ax
+    push cx
+    push dx
+    push si
+    push di
+    
     ; copies directory data into directory_buffer, sets ZF and saves first directory cluster in bx on success
     ; si points to the directory path with leading /
 
@@ -613,6 +620,11 @@ load_directory:
         jmp load_directory__finish
 
     load_directory__finish:
+        pop di
+        pop si
+        pop dx
+        pop cx
+        pop ax
         ret
 
 

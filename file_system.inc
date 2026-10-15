@@ -215,16 +215,10 @@ fs_mkdir:
 
 fs_cat:
     ; si is address of path
-    mov di, path_buffer
-    mov cx, BUFFER_SIZE
-    call copy_nbytes
+    get_upper_case_path
+    push si
 
-    mov si, di
-
-    call to_upper_case
-    mov si, path_buffer
-
-    call find_file
+    call find_file_new
 
     jnz fs_cat__notfound
 
@@ -241,6 +235,8 @@ fs_cat:
         call print_loop
 
     fs_cat__finish:
+        pop si
+        call heap_free
         ret
 
 %endif

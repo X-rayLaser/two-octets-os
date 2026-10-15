@@ -90,7 +90,7 @@ fs_list:
 
 fs_rename:
     ; si is address of arg string
-    allocate_frame 6 ; [path_copy, parent_path, child]
+    allocate_frame 8; [path_copy, parent_path, child, new_entry_buffer]
 
     get_upper_case_path
     mov [bp + 0], si
@@ -108,6 +108,7 @@ fs_rename:
 
     mov di, [argv_pointers+4]
     call fs_replace_entry_filename
+    mov [bp + 6], di
 
     ; check if parent directory is root directory
     mov si, [bp + 2]
@@ -119,6 +120,7 @@ fs_rename:
         ; handle editing non root directory entry
 
         ; provide address of a new entry
+        mov di, [bp + 6]
         mov [update_entry_structure], di
 
         ; load parent directory and get it's starting cluster number
@@ -140,7 +142,7 @@ fs_rename:
 
     fs_rename__root:
         ; handle editing root directory entry
-        mov si, new_dir_entry_buffer
+        mov si, [bp + 6]
         mov di, [bp + 4]
         call update_root_entry
 
@@ -155,16 +157,20 @@ fs_rename:
         free_frame_ptr 0
         free_frame_ptr 1
         free_frame_ptr 2
-        erase_frame 6
+        free_frame_ptr 3
+        erase_frame 8
         ret
 
 
 fs_replace_entry_filename:
     ; si: edited entry address
     ; di: new file name
+    ; returns di: updated entry buffer in memory
     push di
+
+    ; copy 32 bytes from old entry (si) to buffer (di)s
     mov cx, 32
-    mov di, new_dir_entry_buffer
+    call heap_alloc ; -> di
     call copy_nbytes
 
     ; prepare new file name and replace old file name with it (in-memory)
@@ -173,7 +179,6 @@ fs_replace_entry_filename:
     call to_upper_case
     call fix_file_name
     mov cx, 11
-    mov di, new_dir_entry_buffer
     call copy_nbytes
     ret
 

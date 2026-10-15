@@ -68,7 +68,7 @@ fs_list:
     fs_list__maybe_file:
         mov si, [bp]             ; restore path copy address to si
 
-        call find_file_new
+        call find_file
 
         jnz fs_list__notfound ; we have case here that parent directory exists, but there is no target file in it
 
@@ -103,7 +103,7 @@ fs_rename:
 
     mov si, [bp + 0]
     ; retrieve into new temp buffer an entry of the file to be renamed
-    call find_file_new ; file entry -> si
+    call find_file ; file entry -> si
     jnz fs_rename__error
 
     mov di, [argv_pointers+4]
@@ -218,7 +218,7 @@ fs_cat:
     get_upper_case_path
     push si
 
-    call find_file_new
+    call find_file
 
     jnz fs_cat__notfound
 

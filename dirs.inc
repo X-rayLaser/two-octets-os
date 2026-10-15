@@ -536,7 +536,7 @@ search_dir_entry:
         ret
 
 
-find_file_new:
+find_file:
     ; attempts to find a parent directory of the file and locate it's entry
     ; si is the address of the byte string containing complete file path
     ; sets ZF and sets si to the address of the file's entry on success

@@ -68,7 +68,7 @@ fs_list:
     fs_list__maybe_file:
         mov si, [bp]             ; restore path copy address to si
 
-        call find_file
+        call find_file_new
 
         jnz fs_list__notfound ; we have case here that parent directory exists, but there is no target file in it
 

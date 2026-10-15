@@ -592,6 +592,7 @@ find_file_new:
     mov si, di
     call fix_file_name
     call search_dir_entry
+    jnz find_file_new__error
     mov [bp + 4], si
 
     mov ax, 0     ; success flag

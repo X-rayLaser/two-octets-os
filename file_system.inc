@@ -85,19 +85,25 @@ fs_list:
 
 fs_rename:
     ; si is address of arg string
-    mov di, path_buffer
-    mov cx, BUFFER_SIZE
-    call copy_nbytes
+    allocate_frame 6 ; [path_copy, parent_path, child]
 
+    call copy_string ; di -> path copy
+    mov [bp + 0], di
+
+    ; convert path copy to upper case
     mov si, di
-
     call to_upper_case
-    mov si, path_buffer
 
+    call split_and_copy_new ; si -> parent_path, di -> child
+    mov [bp + 2], si
+    mov [bp + 4], di
+    mov si, di
+    call fix_file_name
+
+    mov si, [bp + 0]
     ; retrieve into new temp buffer an entry of the file to be renamed
-    call find_file ; file entry -> si
+    call find_file_new ; file entry -> si
     jnz fs_rename__error
-
     mov cx, 32
     mov di, new_dir_entry_buffer
     call copy_nbytes
@@ -112,7 +118,7 @@ fs_rename:
     call copy_nbytes
 
     ; check if parent directory is root directory
-    mov si, path_buffer
+    mov si, [bp + 2]
     mov cl, 0
     cmp [si+1], cl
     je fs_rename__root
@@ -124,7 +130,7 @@ fs_rename:
         mov [update_entry_structure], di
 
         ; load parent directory and get it's starting cluster number
-        mov si, path_buffer
+        mov si, [bp + 2]
         call load_directory
         jnz fs_rename__error
 
@@ -132,7 +138,7 @@ fs_rename:
         mov [update_entry_structure+2], bx
 
         ; provide old file name to find the entry
-        mov si, file_name_buffer
+        mov si, [bp + 4]
         mov [update_entry_structure+4], si
 
         ; update the entry and write changes to disk
@@ -143,7 +149,7 @@ fs_rename:
     fs_rename__root:
         ; handle editing root directory entry
         mov si, new_dir_entry_buffer
-        mov di, file_name_buffer
+        mov di, [bp + 4]
         call update_root_entry
 
         jnz fs_rename__error
@@ -154,6 +160,7 @@ fs_rename:
         call print_loop
 
     fs_rename__finish:
+        erase_frame 6
         ret
 
 

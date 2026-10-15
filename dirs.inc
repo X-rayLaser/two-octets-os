@@ -561,6 +561,33 @@ find_file:
         ret
 
 
+find_file_new:
+    ; attempts to find a parent directory of the file and locate it's entry
+    ; si is the address of the byte string containing complete file path
+    ; sets ZF and sets si to the address of the file's entry on success
+    push_abcd
+    push di
+
+    call split_and_copy_new
+    ; si -> parent path, di -> file name
+
+    call load_directory ; atempt to load parent directory of whatever is under it
+    jnz find_file_new__finish ; if that fails, the path must be wrong
+
+    ; if it succeeds, find the file entry and show file's data
+    mov si, di
+    call fix_file_name
+    call search_dir_entry
+
+    ; todo: don't use file_name_buffer here in implementation
+    ; todo: call this from fs_rename, fs_list and fs_cat
+    ; todo: refactor those fs functions and remove find_file
+    find_file_new__finish:
+        pop di
+        pop_dcba
+        ret
+
+
 load_directory:
     push ax
     push cx

@@ -7,7 +7,7 @@ ROOTDIR_ADDRESS equ 0x2500     ; 16 KB for storing Root Directory entries
 DISK_BUFFER_ADDRESS equ 0x6500 ; remaining address space for storing temp data fetched from disk and for stack
 KERNEL_ADDRESS equ 0x7e00      ; loaded kernel will reside in memory directly after bootloader
 BUFFER_SIZE equ 256
-TOTAL_HEAP_SIZE equ 2048
+TOTAL_HEAP_SIZE equ 4096
 
 LOWER_CASE_A equ 97
 UPPER_CASE_A equ 65

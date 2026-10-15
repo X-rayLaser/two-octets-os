@@ -57,3 +57,11 @@
     add sp, %1
     pop bp
 %endmacro
+
+%macro free_frame_ptr 1
+    ; free a memory block of the heap pointed by i-th frame variable (pointer)
+    push si
+    mov si, [bp + 2*%1]
+    call heap_free
+    pop si
+%endmacro

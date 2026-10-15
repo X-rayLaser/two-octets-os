@@ -160,6 +160,9 @@ fs_rename:
         call print_loop
 
     fs_rename__finish:
+        free_frame_ptr 0
+        free_frame_ptr 1
+        free_frame_ptr 2
         erase_frame 6
         ret
 

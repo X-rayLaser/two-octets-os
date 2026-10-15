@@ -567,21 +567,38 @@ find_file_new:
     ; sets ZF and sets si to the address of the file's entry on success
     push_abcd
     push di
+    allocate_frame 6
 
     call split_and_copy_new
     ; si -> parent path, di -> file name
+    mov [bp + 0], si
+    mov [bp + 2], di
 
     call load_directory ; atempt to load parent directory of whatever is under it
-    jnz find_file_new__finish ; if that fails, the path must be wrong
+    jnz find_file_new__error ; if that fails, the path must be wrong
 
     ; if it succeeds, find the file entry and show file's data
     mov si, di
     call fix_file_name
     call search_dir_entry
+    mov [bp + 4], si
 
-    ; todo: don't use file_name_buffer here in implementation
-    ; todo: call this from fs_rename, fs_list and fs_cat
-    ; todo: refactor those fs functions and remove find_file
+    mov ax, 0     ; success flag
+    jmp find_file_new__cleanup
+
+    find_file_new__error:
+        mov ax, 1 ; error flag
+
+    find_file_new__cleanup:
+        ; cleanup heap and stack
+        free_frame_ptr 0
+        free_frame_ptr 1
+        mov si, [bp + 4]
+        erase_frame 6
+
+    ; set ZF on success, clear it on error
+    or ax, ax
+
     find_file_new__finish:
         pop di
         pop_dcba

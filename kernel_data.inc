@@ -9,7 +9,6 @@ directory_buffer_ptr dw 0
 
 ; todo: add 2 byte alignment for transfer buffers
 directory_buffer times 2048 db 0 ; buffer for storing up to 64 entries
-file_buffer times 4096 db 0      ; buffer for storing up to 4 KB of files data
 
 new_dir_entry_buffer times BUFFER_SIZE + 1 db 0 ; buffer for storing a new directory entry
 

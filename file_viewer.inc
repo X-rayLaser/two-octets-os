@@ -4,6 +4,7 @@ bits 16
 
 
 file_viewer:
+    push_registers
 
     file_viewer__loop:
         mov al, [si]
@@ -20,6 +21,7 @@ file_viewer:
         jmp file_viewer__loop
 
     file_viewer__finish:
+        pop_registers
         ret
 
 

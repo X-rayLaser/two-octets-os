@@ -215,18 +215,24 @@ fs_mkdir:
 
 fs_cat:
     ; si is address of path
+    allocate_frame 4   ; [file path, file data buffer]
+
     get_upper_case_path
-    push si
+    mov [bp + 0], si
 
     call find_file
 
     jnz fs_cat__notfound
 
     mov bx, [si+26]
-    mov di, file_buffer
+    mov cx, 4096
+    call heap_alloc ; -> di
+    mov [bp + 2], di
+
     mov [data_offset], di
     call load_file
-    mov si, file_buffer
+
+    mov si, [bp + 2]  ; point to file buffer
     call file_viewer
     jmp fs_cat__finish
 
@@ -235,8 +241,14 @@ fs_cat:
         call print_loop
 
     fs_cat__finish:
-        pop si
+        ; freeing path memory
+        mov si, [bp + 0]
         call heap_free
+
+        ; freeing file's data memory
+        mov si, [bp + 2]
+        call heap_free
+        erase_frame 4
         ret
 
 %endif

@@ -7,17 +7,15 @@ bits 16
 %macro create_file_prolog 1
     ; param 1: error handling label
 
-    mov si, path_buffer
-    mov di, file_name_buffer
-    call split_and_copy
-    ; here path_buffer contains path to the file's parent directory
+    call split_and_copy_new
+    ; here si contains path to the file's parent directory
+    ; di contains file name
 
-    ; get file's parent directory length and store it in cx
-    call get_directory_size
-    jnz %1
-    push cx
-
+    push si
+    mov si, di
     call create_directory_entry
+    pop si
+
 %endmacro
 
 %macro create_file_epilog 1
@@ -25,19 +23,21 @@ bits 16
 
     ; todo: handle corner case of creating files in the root directory, e.g. /filename
     ; store the cluster number of the file's parent directory in bx
-    mov si, path_buffer
     call load_directory
     jnz %1
 
     ; treat directory like file and append to it 32-bytes entry corresponding to a new file
     ; and persist it to disk
-    mov si, new_dir_entry_buffer
+    mov di, new_dir_entry_buffer
     mov cx, 32
-    mov [file_append_struct], si
+    mov [file_append_struct], di
     mov [file_append_struct+2], bx
     mov [file_append_struct+4], cx
 
-    pop cx
+    ; get file's parent directory length and store it in cx
+    call get_directory_size
+    jnz %1
+
     mov [file_append_struct+6], cx
 
     call append_file
@@ -45,14 +45,45 @@ bits 16
 
 
 create_file:
-    ; path buffer contains address of a path of file to be created
+    ; si contains address of a path of file to be created
     push_registers
-    create_file_prolog create_file__error
-    create_file_epilog create_file__error
-    jz create_file__finish
+    
+    call split_and_copy_new  ; parent (si) / child (di)
+
+    push si
+    mov si, di
+    call create_directory_entry
+    call heap_free  ; free memory taken by a file name
+    pop si
+    
+    call load_directory
+    jnz create_file__error
+
+    ; treat directory like file and append to it 32-bytes entry corresponding to a new file
+    ; and persist it to disk
+    mov di, new_dir_entry_buffer
+    mov cx, 32
+    mov [file_append_struct], di
+    mov [file_append_struct+2], bx
+    mov [file_append_struct+4], cx
+
+    ; get file's parent directory length and store it in cx
+    call get_directory_size
+    jnz create_file__error
+
+    mov [file_append_struct+6], cx
+
+    call append_file
+    jz create_file__ok
 
     create_file__error:
+        call heap_free 
         or cx, 1 ; clear ZF
+        jmp create_file__finish
+
+    create_file__ok:
+        call heap_free ; free memory taken by parent path
+        sub cx, cx ; set ZF
 
     create_file__finish:
         pop_registers
@@ -475,11 +506,9 @@ create_and_goto_cluster:
 
 
 create_directory_entry:
-    push_abcd
-    push si
-    push di
+    ; si: new file name address
+    push_registers
 
-    mov si, file_name_buffer
     call remove_trailing_slash
     call fix_file_name
 
@@ -492,9 +521,7 @@ create_directory_entry:
     call copy_nbytes
     mov [si+26], bx
 
-    pop di
-    pop si
-    pop_dcba
+    pop_registers
     ret
 
 

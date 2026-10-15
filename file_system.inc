@@ -179,14 +179,9 @@ fs_replace_entry_filename:
 
 fs_mkfile:
     ; si is address of path
-    mov di, path_buffer
-    mov cx, BUFFER_SIZE
-    call copy_nbytes
-
+    call copy_string
     mov si, di
-
     call to_upper_case
-    mov si, path_buffer
 
     call create_file
     jz fs_mkfile__finish
@@ -196,6 +191,8 @@ fs_mkfile:
         call print_loop
     
     fs_mkfile__finish:
+        mov si, di
+        call heap_free
         ret
 
 

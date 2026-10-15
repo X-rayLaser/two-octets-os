@@ -104,18 +104,9 @@ fs_rename:
     ; retrieve into new temp buffer an entry of the file to be renamed
     call find_file_new ; file entry -> si
     jnz fs_rename__error
-    mov cx, 32
-    mov di, new_dir_entry_buffer
-    call copy_nbytes
 
-    ; prepare new file name and replace old file name with it (in-memory)
-
-    mov si, [argv_pointers+4]
-    call to_upper_case
-    call fix_file_name
-    mov cx, 11
-    mov di, new_dir_entry_buffer
-    call copy_nbytes
+    mov di, [argv_pointers+4]
+    call fs_replace_entry_filename
 
     ; check if parent directory is root directory
     mov si, [bp + 2]
@@ -165,6 +156,25 @@ fs_rename:
         free_frame_ptr 2
         erase_frame 6
         ret
+
+
+fs_replace_entry_filename:
+    ; si: edited entry address
+    ; di: new file name
+    push di
+    mov cx, 32
+    mov di, new_dir_entry_buffer
+    call copy_nbytes
+
+    ; prepare new file name and replace old file name with it (in-memory)
+
+    pop si ; si = new file name
+    call to_upper_case
+    call fix_file_name
+    mov cx, 11
+    mov di, new_dir_entry_buffer
+    call copy_nbytes
+    ret
 
 
 fs_mkfile:

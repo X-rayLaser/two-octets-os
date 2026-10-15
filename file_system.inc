@@ -28,6 +28,14 @@ bits 16
 %endmacro
 
 
+%macro get_upper_case_path 0
+    ; expects si to point to original path
+    call copy_string
+    mov si, di
+    call to_upper_case
+%endmacro
+
+
 print_bpb:
     mov si, 0x7c00+0x00B
 
@@ -47,11 +55,8 @@ fs_list:
     ; si is address of path
     allocate_frame 2
 
-    call copy_string   ; di -> path copy
-    mov si, di
-    mov [bp], di
-
-    call to_upper_case
+    get_upper_case_path
+    mov [bp], si
 
     call load_directory
     jnz fs_list__maybe_file ; if it fails, the path may refer to a file rather than a directory
@@ -87,12 +92,8 @@ fs_rename:
     ; si is address of arg string
     allocate_frame 6 ; [path_copy, parent_path, child]
 
-    call copy_string ; di -> path copy
-    mov [bp + 0], di
-
-    ; convert path copy to upper case
-    mov si, di
-    call to_upper_case
+    get_upper_case_path
+    mov [bp + 0], si
 
     call split_and_copy_new ; si -> parent_path, di -> child
     mov [bp + 2], si
@@ -179,10 +180,9 @@ fs_replace_entry_filename:
 
 fs_mkfile:
     ; si is address of path
-    call copy_string
-    mov si, di
-    call to_upper_case
+    get_upper_case_path
 
+    push si
     call create_file
     jz fs_mkfile__finish
 
@@ -191,17 +191,15 @@ fs_mkfile:
         call print_loop
     
     fs_mkfile__finish:
-        mov si, di
+        pop si
         call heap_free
         ret
 
 
 fs_mkdir:
     ; si is address of path
-    call copy_string
-    mov si, di
-    call to_upper_case
-
+    get_upper_case_path
+    push si
     call create_directory
     jz fs_mkdir__finish
 
@@ -210,7 +208,7 @@ fs_mkdir:
         call print_loop
     
     fs_mkdir__finish:
-        mov si, di
+        pop si
         call heap_free
         ret
 

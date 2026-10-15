@@ -5,19 +5,13 @@
 %include "constants.inc"
 
 buffer times BUFFER_SIZE + 1 db 0
-second_buffer times BUFFER_SIZE + 1 db 0
 directory_buffer_ptr dw 0
 
 ; todo: add 2 byte alignment for transfer buffers
 directory_buffer times 2048 db 0 ; buffer for storing up to 64 entries
 file_buffer times 4096 db 0      ; buffer for storing up to 4 KB of files data
 null_buffer times 4096 db 0      ; buffer of zeros to prepare allocated clusters with size up to 4 KB
-path_buffer times BUFFER_SIZE + 1 db 0 ; buffer for storing file path
-file_name_buffer times BUFFER_SIZE + 1 db 0
 
-
-parent_path_buffer times BUFFER_SIZE + 1 db 0 ; another buffer for storing path to the parent directory
-subdir_name_buffer times BUFFER_SIZE + 1 db 0 ; another buffer for storing subdirectory name
 new_dir_entry_buffer times BUFFER_SIZE + 1 db 0 ; buffer for storing a new directory entry
 
 test_directory_name db "FILES      ", 0

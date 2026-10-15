@@ -4,7 +4,7 @@ bits 16
 
 %include "constants.inc"
 
-%macro create_file_prolog 1
+%macro create_file_prolog 0
     ; param 1: error handling label
 
     call split_and_copy_new
@@ -14,12 +14,15 @@ bits 16
     push si
     mov si, di
     call create_directory_entry
+    call heap_free  ; free memory taken by a file name
     pop si
 
 %endmacro
 
 %macro create_file_epilog 1
     ; param 1: error handling label
+
+    ; si is assumed to point to file's parent path
 
     ; todo: handle corner case of creating files in the root directory, e.g. /filename
     ; store the cluster number of the file's parent directory in bx
@@ -47,33 +50,9 @@ bits 16
 create_file:
     ; si contains address of a path of file to be created
     push_registers
-    
-    call split_and_copy_new  ; parent (si) / child (di)
 
-    push si
-    mov si, di
-    call create_directory_entry
-    call heap_free  ; free memory taken by a file name
-    pop si
-    
-    call load_directory
-    jnz create_file__error
-
-    ; treat directory like file and append to it 32-bytes entry corresponding to a new file
-    ; and persist it to disk
-    mov di, new_dir_entry_buffer
-    mov cx, 32
-    mov [file_append_struct], di
-    mov [file_append_struct+2], bx
-    mov [file_append_struct+4], cx
-
-    ; get file's parent directory length and store it in cx
-    call get_directory_size
-    jnz create_file__error
-
-    mov [file_append_struct+6], cx
-
-    call append_file
+    create_file_prolog
+    create_file_epilog create_file__error
     jz create_file__ok
 
     create_file__error:
@@ -93,18 +72,23 @@ create_file:
 create_directory:
     ; path buffer contains address of a path of directory to be created
     push_registers
-    create_file_prolog create_directory__error
 
-    push ax
+    create_file_prolog
+    
     mov al, 0x10
     mov [new_dir_entry_buffer+11], al
-    pop ax
 
     create_file_epilog create_directory__error
-    jz create_directory__finish
+    jz create_directory__ok
 
     create_directory__error:
+        call heap_free
         or cx, 1 ; clear ZF
+        jmp create_directory__finish
+
+    create_directory__ok:
+        call heap_free ; free memory taken by parent path
+        sub cx, cx ; set ZF
 
     create_directory__finish:
         pop_registers

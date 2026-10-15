@@ -198,14 +198,9 @@ fs_mkfile:
 
 fs_mkdir:
     ; si is address of path
-    mov di, path_buffer
-    mov cx, BUFFER_SIZE
-    call copy_nbytes
-
+    call copy_string
     mov si, di
-
     call to_upper_case
-    mov si, path_buffer
 
     call create_directory
     jz fs_mkdir__finish
@@ -215,6 +210,8 @@ fs_mkdir:
         call print_loop
     
     fs_mkdir__finish:
+        mov si, di
+        call heap_free
         ret
 
 

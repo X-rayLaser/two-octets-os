@@ -536,42 +536,6 @@ search_dir_entry:
         ret
 
 
-find_file:
-    ; attempts to find a parent directory of the file and locate it's entry
-    ; si is the address of the byte string containing complete file path
-    ; sets ZF and sets si to the address of the file's entry on success
-    push_abcd
-    push di
-
-    call split_path
-
-    add si, bx ; start of the file name
-    mov di, file_name_buffer
-    mov cx, 32
-    call copy_nbytes
-
-    ; putting null terminating character (0) at the start of file name portion
-    mov al, 0
-    mov [si], al
-
-    mov si, path_buffer
-    call load_directory ; atempt to load parent directory of whatever is under it
-
-    jnz find_file__finish ; if that fails, the path must be wrong
-
-    ; if it succeeds, find the file entry and show file's data
-
-    mov si, file_name_buffer
-    call fix_file_name
-    mov di, file_name_buffer
-    call search_dir_entry
-
-    find_file__finish:
-        pop di
-        pop_dcba
-        ret
-
-
 find_file_new:
     ; attempts to find a parent directory of the file and locate it's entry
     ; si is the address of the byte string containing complete file path

@@ -5,33 +5,30 @@ bits 16
 %include "constants.inc"
 
 %macro create_file_prolog 0
-    ; param 1: error handling label
-
     call split_and_copy_new
     ; here si contains path to the file's parent directory
     ; di contains file name
+    mov [bp + 0], si ; preserve parent path
 
-    push si
     mov si, di
     call create_directory_entry
-    call heap_free  ; free memory taken by a file name
-    pop si
+    mov [bp + 2], di ; preserve new entry
 
+    call heap_free  ; free memory taken by a file name
 %endmacro
 
 %macro create_file_epilog 1
     ; param 1: error handling label
 
-    ; si is assumed to point to file's parent path
-
     ; todo: handle corner case of creating files in the root directory, e.g. /filename
     ; store the cluster number of the file's parent directory in bx
+    mov si, [bp + 0]
     call load_directory
     jnz %1
 
     ; treat directory like file and append to it 32-bytes entry corresponding to a new file
     ; and persist it to disk
-    mov di, new_dir_entry_buffer
+    mov di, [bp + 2]
     mov cx, 32
     mov [file_append_struct], di
     mov [file_append_struct+2], bx
@@ -50,21 +47,19 @@ bits 16
 create_file:
     ; si contains address of a path of file to be created
     push_registers
+    allocate_frame 4   ; [parent_path, new_entry]
 
     create_file_prolog
-    create_file_epilog create_file__error
-    jz create_file__ok
+    create_file_epilog create_file__finally
 
-    create_file__error:
-        call heap_free 
-        or cx, 1 ; clear ZF
-        jmp create_file__finish
-
-    create_file__ok:
-        call heap_free ; free memory taken by parent path
-        sub cx, cx ; set ZF
+    create_file__finally:
+        call handle_finally
 
     create_file__finish:
+        free_frame_ptr 0
+        free_frame_ptr 1
+        erase_frame 4
+        or ax, ax
         pop_registers
         ret
 
@@ -72,26 +67,39 @@ create_file:
 create_directory:
     ; path buffer contains address of a path of directory to be created
     push_registers
+    allocate_frame 4   ; [parent_path, new_entry]
 
     create_file_prolog
     
+    mov di, [bp + 2]
     mov al, 0x10
-    mov [new_dir_entry_buffer+11], al
+    mov [di+11], al
 
-    create_file_epilog create_directory__error
-    jz create_directory__ok
+    create_file_epilog create_directory__finally
 
-    create_directory__error:
-        call heap_free
-        or cx, 1 ; clear ZF
-        jmp create_directory__finish
-
-    create_directory__ok:
-        call heap_free ; free memory taken by parent path
-        sub cx, cx ; set ZF
+    create_directory__finally:
+        call handle_finally
 
     create_directory__finish:
+        free_frame_ptr 0
+        free_frame_ptr 1
+        erase_frame 4
+        or ax, ax
         pop_registers
+        ret
+
+
+handle_finally:
+    jz handle_finally__ok
+
+    handle_finally__error:
+        mov ax, 1
+        jmp handle_finally__finish
+
+    handle_finally__ok:
+        mov ax, 0
+
+    handle_finally__finish:
         ret
 
 
@@ -491,7 +499,9 @@ create_and_goto_cluster:
 
 create_directory_entry:
     ; si: new file name address
-    push_registers
+    ; returns new directory entry in di
+    push_abcd
+    push si
 
     call remove_trailing_slash
     call fix_file_name
@@ -499,13 +509,14 @@ create_directory_entry:
     call allocate_cluster ; new cluster number -> bx
 
     ; copy 11 bytes of file name into the buffer
-    mov di, new_dir_entry_buffer
-    call clear_buffer
+    mov cx, 32
+    call heap_alloc ; -> di
     mov cx, 11
     call copy_nbytes
     mov [si+26], bx
 
-    pop_registers
+    pop si
+    pop_dcba
     ret
 
 

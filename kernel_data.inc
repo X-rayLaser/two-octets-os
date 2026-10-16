@@ -10,8 +10,6 @@ directory_buffer_ptr dw 0
 ; todo: add 2 byte alignment for transfer buffers
 directory_buffer times 2048 db 0 ; buffer for storing up to 64 entries
 
-new_dir_entry_buffer times BUFFER_SIZE + 1 db 0 ; buffer for storing a new directory entry
-
 test_directory_name db "FILES      ", 0
 prompt db "$ ", 0
 msg_hello db "Hello from kernel, indeed!", 0x0D, 0x0A, 0

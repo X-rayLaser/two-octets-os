@@ -29,7 +29,7 @@ bits 16
     ; treat directory like file and append to it 32-bytes entry corresponding to a new file
     ; and persist it to disk
     mov di, [bp + 2]
-    mov cx, 32
+    mov cx, DIRECTORY_ENTRY_SIZE
     mov [file_append_struct], di
     mov [file_append_struct+2], bx
     mov [file_append_struct+4], cx
@@ -124,8 +124,8 @@ get_directory_size:
         or al, al
         jz get_directory_size__finish
 
-        add cx, 32
-        add si, 32
+        add cx, DIRECTORY_ENTRY_SIZE
+        add si, DIRECTORY_ENTRY_SIZE
         jmp get_directory_size__loop
     
     get_directory_size__error:
@@ -224,7 +224,7 @@ update_root_entry:
         ; replace old 32-byte entry with new entry in the buffer
         mov di, si ; di = start of old entry in sector_buffer
         pop si     ; si = buffer with new entry data
-        mov cx, 32
+        mov cx, DIRECTORY_ENTRY_SIZE
         call copy_nbytes
 
         ; write in-memory updated sector (in sector_buffer) to ax-th logical disk sector
@@ -279,7 +279,7 @@ update_directory_entry:
         ; replace old 32-byte entry with new entry in the buffer
         mov di, si                       ; di = start of old entry in cluster_buffer
         mov si, [update_entry_structure] ; si = buffer address of a new entry
-        mov cx, 32
+        mov cx, DIRECTORY_ENTRY_SIZE
         call copy_nbytes
         call write_cluster
         sub cx, cx ; force set ZF
@@ -322,7 +322,7 @@ fix_directory_length:
 
     ; update length in-memory (within cluster_buffer)
     mov ax, [si+28]
-    mov cx, 32
+    mov cx, DIRECTORY_ENTRY_SIZE
     add ax, cx
     mov [si+28], ax
 
@@ -509,7 +509,7 @@ create_directory_entry:
     call allocate_cluster ; new cluster number -> bx
 
     ; copy 11 bytes of file name into the buffer
-    mov cx, 32
+    mov cx, DIRECTORY_ENTRY_SIZE
     call heap_alloc ; -> di
     mov cx, 11
     call copy_nbytes
@@ -535,7 +535,7 @@ search_dir_entry:
         call check_directory_entry
         jz search_dir_entry__finish; check if entry found
 
-        add si, 32 ; go to the next entry
+        add si, DIRECTORY_ENTRY_SIZE ; go to the next entry
         jmp search_dir_entry__loop
 
     search_dir_entry__notfound:
@@ -679,7 +679,7 @@ load_next_dir:
         jz load_next_dir__found; check if entry found
 
         load_next_dir__next_entry:
-            add si, 32 ; go to the next entry
+            add si, DIRECTORY_ENTRY_SIZE ; go to the next entry
             jmp load_next_dir__loop
     
     load_next_dir__notfound:
@@ -743,7 +743,7 @@ print_directory:
         je print_directory__finish
 
         call print_directory_entry
-        add si, 32  ; go to the next entry
+        add si, DIRECTORY_ENTRY_SIZE  ; go to the next entry
 
         jmp print_directory__print_entry
 

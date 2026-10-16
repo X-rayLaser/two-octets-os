@@ -169,7 +169,7 @@ fs_replace_entry_filename:
     push di
 
     ; copy 32 bytes from old entry (si) to buffer (di)s
-    mov cx, 32
+    mov cx, DIRECTORY_ENTRY_SIZE
     call heap_alloc ; -> di
     call copy_nbytes
 

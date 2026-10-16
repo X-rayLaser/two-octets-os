@@ -131,7 +131,7 @@ first_rootdir_sector:
 sectors_per_rootdir:
     ; ax will store size of root directory in bytes
     mov ax, [0x7c00+0x011] ; number of directory entries
-    mov bx, 32
+    mov bx, DIRECTORY_ENTRY_SIZE
     mul bx
 
     ; ax will store number of logical sectors in root directory

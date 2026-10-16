@@ -9,6 +9,9 @@ KERNEL_ADDRESS equ 0x7e00      ; loaded kernel will reside in memory directly af
 BUFFER_SIZE equ 256
 TOTAL_HEAP_SIZE equ 8192
 
+MAX_FILENAME_LENGTH  equ 64
+DIRECTORY_ENTRY_SIZE equ 32    ; bytes per directory entry
+
 LOWER_CASE_A equ 97
 UPPER_CASE_A equ 65
 

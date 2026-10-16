@@ -40,7 +40,7 @@ get_kernel_first_cluster:
         cmp bx, -1
         jne get_kernel_first_cluster__finish
 
-        add si, 32
+        add si, DIRECTORY_ENTRY_SIZE
         jmp get_kernel_first_cluster__check_entry
 
     get_kernel_first_cluster__finish:

@@ -14,11 +14,11 @@ split_path:
     mov si, di
     push si
 
-    mov cx, 32
+    mov cx, MAX_FILENAME_LENGTH
     call heap_alloc  ; di -> new_buffer
     call get_last_path_segment_index
     add si, bx ; start of the file name
-    mov cx, 32
+    mov cx, MAX_FILENAME_LENGTH
     call copy_nbytes
     ; putting null terminating character (0) at the start of file name portion
     mov al, 0

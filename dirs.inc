@@ -5,7 +5,7 @@ bits 16
 %include "constants.inc"
 
 %macro create_file_prolog 0
-    call split_and_copy_new
+    call split_path
     ; here si contains path to the file's parent directory
     ; di contains file name
     mov [bp + 0], si ; preserve parent path
@@ -148,7 +148,7 @@ load_subdir_entry:
     push di
 
     ; split path into parent (si) / child (di)
-    call split_and_copy_new
+    call split_path
 
     ; fix child
     push si
@@ -304,7 +304,7 @@ fix_directory_length:
     push_registers
 
     ; split path into parent_path (si) / child (di)
-    call split_and_copy_new
+    call split_path
 
     push si
     mov si, di
@@ -555,7 +555,7 @@ find_file:
     push di
     allocate_frame 6
 
-    call split_and_copy_new
+    call split_path
     ; si -> parent path, di -> file name
     mov [bp + 0], si
     mov [bp + 2], di

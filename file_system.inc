@@ -95,7 +95,7 @@ fs_rename:
     get_upper_case_path
     mov [bp + 0], si
 
-    call split_and_copy_new ; si -> parent_path, di -> child
+    call split_path ; si -> parent_path, di -> child
     mov [bp + 2], si
     mov [bp + 4], di
     mov si, di

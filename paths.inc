@@ -3,16 +3,8 @@ bits 16
 %define paths
 
 
-get_parent:
-    ; given a file/directory path, extracts path to its parent
-    ; expects:
-    ;   si to store input path address, 
-    ;   di to store output path address
-    call split_and_copy
-    ret
-
-
-split_and_copy_new:
+split_path:
+    ; split si path into parent (si) / child (di)
     ; returns
     ;   si: address of newly created parent path
     ;   di: address of newly created child name
@@ -20,38 +12,25 @@ split_and_copy_new:
     call copy_string ; di -> copy
 
     mov si, di
+    push si
+
     mov cx, 32
     call heap_alloc  ; di -> new_buffer
-    call split_and_copy
-
-    pop_dcba
-    ret
-
-
-split_and_copy:
-    ; similar to split_path, but copy the final segment into address given by di
-    ; and truncate the preceding part of string (si) in place
-    push_abcd
-    push si
-    push di
-    call split_path
-
+    call get_last_path_segment_index
     add si, bx ; start of the file name
     mov cx, 32
     call copy_nbytes
-
     ; putting null terminating character (0) at the start of file name portion
     mov al, 0
     mov [si], al
-
-    pop di
     pop si
+
     pop_dcba
     ret
 
 
-split_path:
-    ; split path into parent directory path (si) and remaining segment (filename/directory)
+get_last_path_segment_index:
+    ; split path into parent directory path and remaining segment (filename/directory)
     ; stores start position of remaining segment in bx
 
     push ax
@@ -69,16 +48,16 @@ split_path:
 
     mov bx, si
 
-    split_path__loop:
+    get_last_path_segment_index__loop:
         mov al, [si]
         or al, al
-        jz split_path__finish
+        jz get_last_path_segment_index__finish
 
         mov bx, si ; save address
         call parse_path_segment
-        jmp split_path__loop
+        jmp get_last_path_segment_index__loop
 
-    split_path__finish:
+    get_last_path_segment_index__finish:
         pop si
         sub bx, si
 

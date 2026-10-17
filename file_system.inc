@@ -188,8 +188,17 @@ fs_mkfile:
     get_upper_case_path
 
     push si
+
+    call is_parent_root
+    jz fs_mkfile__root
+
     call create_file
     jz fs_mkfile__finish
+    jmp fs_mkfile__error
+
+    fs_mkfile__root:
+        call create_file_under_root
+        jz fs_mkfile__finish
 
     fs_mkfile__error:
         mov si, file_not_found
@@ -204,9 +213,19 @@ fs_mkfile:
 fs_mkdir:
     ; si is address of path
     get_upper_case_path
+
     push si
+    
+    call is_parent_root
+    jz fs_mkdir__root
+
     call create_directory
     jz fs_mkdir__finish
+    jmp fs_mkdir__error
+
+    fs_mkdir__root:
+        call create_dir_under_root
+        jz fs_mkdir__finish
 
     fs_mkdir__error:
         mov si, file_not_found

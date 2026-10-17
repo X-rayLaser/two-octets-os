@@ -4,6 +4,7 @@
 
 %include "constants.inc"
 
+root_path      db "/", 0
 prompt         db "$ ", 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
 file_not_found db "File or directory not found", 0x0D, 0x0A, 0

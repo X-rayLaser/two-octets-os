@@ -221,4 +221,22 @@ fix_file_name:
         ret
 
 
+is_parent_root:
+    ; set ZF if parent path of si is just /
+    push_registers
+    call split_path
+    mov al, [si+1]
+
+    ; free parent
+    call heap_free
+
+    ; free file name
+    mov si, di
+    call heap_free
+
+    or al, al
+    pop_registers
+    ret
+
+
 %endif

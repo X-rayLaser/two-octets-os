@@ -44,6 +44,77 @@ bits 16
 %endmacro
 
 
+%macro create_root_file_epilog 0
+    ; compute ax, root record's logical sector on disk
+    call first_rootdir_sector  ; -> ax
+
+    push ax
+    call get_root_entry_sector ; -> ax
+    pop bx
+    add ax, bx
+
+    ; read sector, update it in memory, flush sector to disk
+    call read_logical_sector
+
+    mov di, sector_buffer
+    add di, dx
+    mov cx, DIRECTORY_ENTRY_SIZE
+    mov si, [bp + 2]
+    call copy_nbytes
+    call write_logical_sector
+
+    ; refresh root directory structure in memory
+    call read_root_directory
+
+    ; cleanup
+    free_frame_ptr 0
+    free_frame_ptr 1
+    erase_frame 4
+    sub cx, cx    ; set ZF
+    pop_registers
+%endmacro
+
+
+create_file_under_root:
+    ; si contains address of a path of file to be created
+    push_registers
+    allocate_frame 4   ; [parent_path, new_entry]
+
+    create_file_prolog
+    create_root_file_epilog
+    ret
+
+
+create_dir_under_root:
+    ; si contains address of a path of directory to be created
+    push_registers
+    allocate_frame 4   ; [parent_path, new_entry]
+
+    create_file_prolog
+
+    mov di, [bp + 2]
+    mov al, 0x10
+    mov [di+11], al
+
+    create_root_file_epilog
+    ret
+
+
+
+get_root_entry_sector:
+    ; compute relative location of of next entry to be inserted in the root directory
+    ; returns ax, record's sector offset relative to the root directory start
+    ; returns dx, record's byte offset relative to the start of the sector
+    mov si, root_path
+    call get_directory_size ; cx = bytes occupied by existing records
+
+    mov ax, cx
+    mov cx, [0x7c00+0x00B]  ; bytes per logical sector
+    xor dx, dx
+    div cx
+    ret
+
+
 create_file:
     ; si contains address of a path of file to be created
     push_registers
@@ -116,7 +187,7 @@ get_directory_size:
     call load_directory
     jnz get_directory_size__error
 
-    mov si, directory_buffer
+    mov si, [directory_buffer_ptr]
 
     mov cx, 0
     get_directory_size__loop:
@@ -129,7 +200,7 @@ get_directory_size:
         jmp get_directory_size__loop
     
     get_directory_size__error:
-        
+
 
     get_directory_size__finish:
         pop di
@@ -244,6 +315,8 @@ update_root_entry:
     update_root_entry__finish:
         pop_registers
         ret
+
+
 
 
 read_root_directory:

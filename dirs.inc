@@ -5,6 +5,9 @@ bits 16
 %include "constants.inc"
 
 %macro create_file_prolog 0
+    push_registers
+    allocate_frame 4   ; [parent_path, new_entry]
+
     call split_path
     ; here si contains path to the file's parent directory
     ; di contains file name
@@ -19,8 +22,7 @@ bits 16
 
 %macro create_file_epilog 1
     ; param 1: error handling label
-
-    ; todo: handle corner case of creating files in the root directory, e.g. /filename
+    
     ; store the cluster number of the file's parent directory in bx
     mov si, [bp + 0]
     call load_directory
@@ -77,9 +79,6 @@ bits 16
 
 create_file_under_root:
     ; si contains address of a path of file to be created
-    push_registers
-    allocate_frame 4   ; [parent_path, new_entry]
-
     create_file_prolog
     create_root_file_epilog
     ret
@@ -87,9 +86,6 @@ create_file_under_root:
 
 create_dir_under_root:
     ; si contains address of a path of directory to be created
-    push_registers
-    allocate_frame 4   ; [parent_path, new_entry]
-
     create_file_prolog
 
     mov di, [bp + 2]
@@ -117,9 +113,6 @@ get_root_entry_sector:
 
 create_file:
     ; si contains address of a path of file to be created
-    push_registers
-    allocate_frame 4   ; [parent_path, new_entry]
-
     create_file_prolog
     create_file_epilog create_file__finally
 
@@ -137,9 +130,6 @@ create_file:
 
 create_directory:
     ; path buffer contains address of a path of directory to be created
-    push_registers
-    allocate_frame 4   ; [parent_path, new_entry]
-
     create_file_prolog
     
     mov di, [bp + 2]

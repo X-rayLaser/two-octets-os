@@ -570,7 +570,7 @@ create_directory_entry:
     call fix_file_name
 
     call allocate_cluster ; new cluster number -> bx
-    call flush_fat
+    call sync_all_fats
 
     ; copy 11 bytes of file name into the buffer
     mov cx, DIRECTORY_ENTRY_SIZE

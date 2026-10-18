@@ -134,17 +134,52 @@ get_last_cluster:
         ret
 
 
-flush_fat:
-    ; set number of sectors to transfer:
-    ; ax := ax * cx
+sync_all_fats:
+    ; overwrite all FATs on disk with a current in-memory copy
     push_registers
+
+    mov ax, [0x7c00+0x00E] ; Logical sector of the first FAT on disk
+
+    xor cx, cx
+    mov cl, [0x7c00+0x010] ; # of FATs on disk
+    
+    sync_all_fats__loop:
+        cmp cx, 0
+        jle sync_all_fats__finish
+
+        call flush_fat
+
+        ; go to the address of next FAT on disk
+        mov bx, [0x7c00+0x016]       ; # logical sectors per FAT
+        add ax, bx
+
+        dec cx
+
+        jmp sync_all_fats__loop
+
+    sync_all_fats__finish:
+        pop_registers
+        ret
+
+
+flush_fat:
+    ; update single FAT on disk with a current in-memory copy
+    ; ax is the address of first logical sector of a given i-th FAT on disk
+
+    push_registers
+
+    push ax
+    ; set number of sectors to transfer:
     call get_logical_sector_size ; -> ax, physical sectors per logical sector
+
+    ; ax := ax * cx
     mov cx, [0x7c00+0x016]       ; # logical sectors per FAT
     mul cx
     mov [daps+2], ax
 
+    pop ax
+
     ; set LBA address of logical sector to write to the first FAT sector
-    mov ax, [0x7c00+0x00E] ; Reserved logical sectors
     call set_lba_address
 
     ; in-memory location of FAT

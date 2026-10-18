@@ -172,11 +172,9 @@ get_fat_record_sector:
     ; return dx, record's byte offset within sector
     push bx
     push cx
-    
-    push ax
-    call get_logical_sector_size
-    mov cx, ax
-    pop ax
+
+    mov cx, [0x7c00+0x00B] ; size of logical sector in bytes
+
     call locate_fat_record
     xor dx, dx
     div cx

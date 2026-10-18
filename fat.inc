@@ -134,6 +134,28 @@ get_last_cluster:
         ret
 
 
+flush_fat:
+    ; set number of sectors to transfer:
+    ; ax := ax * cx
+    push_registers
+    call get_logical_sector_size ; -> ax, physical sectors per logical sector
+    mov cx, [0x7c00+0x016]       ; # logical sectors per FAT
+    mul cx
+    mov [daps+2], ax
+
+    ; set LBA address of logical sector to write to the first FAT sector
+    mov ax, [0x7c00+0x00E] ; Reserved logical sectors
+    call set_lba_address
+
+    ; in-memory location of FAT
+    mov ax, FAT_ADDRESS
+    call set_transfer_buffer
+
+    call write_disk_lba
+    pop_registers
+    ret
+
+
 persist_fat_record:
     ; saves fat record bx to disk
     push_registers

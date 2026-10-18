@@ -191,38 +191,6 @@ flush_fat:
     ret
 
 
-persist_fat_record:
-    ; saves fat record bx to disk
-    push_registers
-
-    ; locate modified in-memory fat record (new)
-    mov ax, bx
-    push bx
-    call locate_fat_record
-    mov si, FAT_ADDRESS
-    add si, ax
-
-    pop bx
-    mov ax, bx
-    call get_fat_record_sector ; (ax:dx) = (absolute sector : byte offset within sector)
-
-    push ax
-    ; read sector and locate record within sector (old)
-    call read_logical_sector
-    mov di, sector_buffer
-    add di, dx
-
-    ; copy modified record to sector_buffer
-    mov cx, 2
-    call copy_nbytes
-
-    ; flush sector_buffer
-    pop ax
-    call write_logical_sector
-    pop_registers
-    ret
-
-
 get_fat_record_sector:
     ; given a record number ax,
     ; return ax, absolute address of logical sector containing it

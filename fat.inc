@@ -133,4 +133,154 @@ get_last_cluster:
         pop bx ; result
         ret
 
+
+persist_fat_record:
+    ; saves fat record bx to disk
+    push_registers
+
+    ; locate modified in-memory fat record (new)
+    mov ax, bx
+    push bx
+    call locate_fat_record
+    mov si, FAT_ADDRESS
+    add si, ax
+
+    pop bx
+    mov ax, bx
+    call get_fat_record_sector ; (ax:dx) = (absolute sector : byte offset within sector)
+
+    push ax
+    ; read sector and locate record within sector (old)
+    call read_logical_sector
+    mov di, sector_buffer
+    add di, dx
+
+    ; copy modified record to sector_buffer
+    mov cx, 2
+    call copy_nbytes
+
+    ; flush sector_buffer
+    pop ax
+    call write_logical_sector
+    pop_registers
+    ret
+
+
+get_fat_record_sector:
+    ; given a record number ax,
+    ; return ax, absolute address of logical sector containing it
+    ; return dx, record's byte offset within sector
+    push bx
+    push cx
+    
+    push ax
+    call get_logical_sector_size
+    mov cx, ax
+    pop ax
+    call locate_fat_record
+    xor dx, dx
+    div cx
+    ; ax = logical sector relative to FAT start,
+    ; dx = record's byte offset within sector
+
+    ; ax = record's relative sector number + first FAT sector 
+    mov bx, [0x7c00+0x00E] ; Reserved logical sectors
+    add ax, bx
+
+    pop cx
+    pop bx
+    ret
+
+
+locate_fat_record:
+    ; find starting byte of a FAT record by it's index ax
+    ; return ax, record offset relative to the start of FAT
+    push cx
+    push dx
+
+    ; ax = (ax * 3) // 2
+    mov cx, 3
+    mul cx
+    mov cx, 2
+    xor dx, dx
+    div cx
+
+    pop dx
+    pop cx
+    ret
+
+
+load_file_debug:
+    ; set number of sectors to transfer to equal cluster size (in sectors)
+    xor ax, ax
+    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mov [daps+2], ax
+
+    load_file_debug__loop:
+            push_registers
+        mov di, buffer
+        call clear_buffer
+        mov ax, bx
+        call itos
+        mov si, di
+        call print_loop
+        call carriage_return
+        pop_registers
+
+    push bx
+    
+    ; ax = (bx - 2) * cluster size
+    dec bx
+    dec bx
+    xor ax, ax
+    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mul bx                 ; ax = offset of cluster's first sector
+
+    push ax
+
+    ; ax = first_rootdir_sector + sectors_per_rootdir
+    call first_rootdir_sector ; -> ax
+    mov cx, ax
+    call sectors_per_rootdir ; -> ax
+    add ax, cx
+
+    pop cx ; restore ax (cluster's offset) to cx
+    add ax, cx
+
+    call set_lba_address
+
+    pop bx ; restore original bx (with 2-based indexing)
+
+    mov ax, [data_offset]
+    call set_transfer_buffer
+
+    call read_disk_lba
+    jc load_file_debug__some_error
+
+    ; increment data_offset (location of next cluster in RAM) by cluster_size * logical_sector_size
+    mov ax, [0x7c00+0x00B] ; bytes per logical sector
+    mov cx, [0x7c00+0x00D] ; logical sectors per cluster
+    mul cx
+
+    mov cx, [data_offset]
+    add ax, cx
+    mov [data_offset], ax
+
+    call get_next_cluster_num ; bx = next cluster number
+
+    cmp bx, 0xfff
+    je load_file_debug__finish
+    cmp bx, 0xff0f
+
+    je load_file_debug__finish
+    jmp load_file_debug__loop
+
+    load_file_debug__some_error:
+        mov si, error
+        call print_loop
+
+    load_file_debug__finish:
+        ret
+
+
 %endif

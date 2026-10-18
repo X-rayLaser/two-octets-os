@@ -570,13 +570,14 @@ create_directory_entry:
     call fix_file_name
 
     call allocate_cluster ; new cluster number -> bx
+    call persist_fat_record
 
     ; copy 11 bytes of file name into the buffer
     mov cx, DIRECTORY_ENTRY_SIZE
     call heap_alloc ; -> di
     mov cx, 11
     call copy_nbytes
-    mov [si+26], bx
+    mov [di+26], bx
 
     pop si
     pop_dcba
@@ -762,7 +763,7 @@ load_next_dir:
         mov di, directory_buffer
         mov [data_offset], di
         mov [directory_buffer_ptr], di
-        call load_file
+        call load_file_debug
 
         pop bx
         xor al, al ; force setting ZF

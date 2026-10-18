@@ -763,7 +763,7 @@ load_next_dir:
         mov di, directory_buffer
         mov [data_offset], di
         mov [directory_buffer_ptr], di
-        call load_file_debug
+        call load_file
 
         pop bx
         xor al, al ; force setting ZF

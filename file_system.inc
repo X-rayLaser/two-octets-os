@@ -358,6 +358,14 @@ fs_file_append:
     mov ax, [si+28]
     mov [file_append_struct+6], ax
 
+    ; replace null terminator with newline
+    mov di, [bp + 2]
+    mov cx, [bp + 6]
+    dec cx
+    add di, cx
+    mov al, 10 ; \n
+    mov [di], al
+
     ; write a string to the end of file
     call append_file
     jnz fs_file_append__error
@@ -373,7 +381,6 @@ fs_file_append:
     mov ax, [di+28]
     mov cx, [bp + 6]
     add ax, cx
-    dec ax
     mov [di+28], ax
 
     ; update file's entry and persist it on disk

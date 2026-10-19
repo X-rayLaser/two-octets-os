@@ -61,6 +61,7 @@ get_command_address:
     detect_command cmd_rename, run_rename
     detect_command cmd_mkfile, run_mkfile
     detect_command cmd_mkdir, run_mkdir
+    detect_command cmd_fwrite, run_fwrite
 
     get_command_address__not_found:
         mov ax, 0
@@ -125,6 +126,13 @@ run_mkfile:
 run_mkdir:
     mov si, [argv_pointers+2]
     call fs_mkdir
+    ret
+
+
+run_fwrite:
+    mov si, [argv_pointers+2]
+    mov di, [argv_pointers+4]
+    call fs_file_append
     ret
 
 

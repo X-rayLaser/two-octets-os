@@ -162,6 +162,55 @@ fs_rename:
         ret
 
 
+update_non_root_entry:
+    ; handle editing non root directory entry
+    ; si, address of a full path of file whose entry needs updating
+    ; di, address of a new entry for the file
+    ; sets ZF on success
+    push_registers
+
+    ; provide address of a new entry
+    mov [update_entry_structure], di
+
+    call split_path
+
+    ; set cluster number of the directory whose entry needs update
+    call load_directory ; bx : = first cluster number of a directory
+    jnz update_non_root_entry__error
+    mov [update_entry_structure+2], bx
+
+    ; provide old file name to find the entry
+    push si
+    mov si, di
+    call remove_trailing_slash
+    call fix_file_name
+    mov [update_entry_structure+4], si
+    pop si
+    
+    ; update the entry and write changes to disk
+    call update_directory_entry
+    jnz update_non_root_entry__error
+
+    mov ax, 0
+    jmp update_non_root_entry__cleanup
+
+    update_non_root_entry__error:
+        mov ax, 1
+
+    update_non_root_entry__cleanup:
+        ; free parent path
+        call heap_free
+
+        ; free file name
+        mov si, di
+        call heap_free
+    
+    update_non_root_entry__finish:
+        or ax, ax ; set ZF as needed
+        pop_registers
+        ret
+
+
 fs_replace_entry_filename:
     ; si: edited entry address
     ; di: new file name
@@ -273,6 +322,77 @@ fs_cat:
         mov si, [bp + 2]
         call heap_free
         erase_frame 4
+        ret
+
+
+fs_file_append:
+    ; si is address of file path
+    ; di is address of a string to be appended
+    allocate_frame 8 ; [file path, appended string, file entry, appended length]
+
+    push di
+    get_upper_case_path
+    pop di
+
+    mov [bp + 0], si
+    mov [bp + 2], di
+
+    ; set appending string
+    mov [file_append_struct], di
+
+    ; read file's entry, set starting cluster no
+    call find_file
+    jnz fs_file_append__not_found
+    mov [bp + 4], si
+    mov bx, [si+26]
+    mov [file_append_struct+2], bx
+
+    ; set appended string length
+    mov si, [bp + 2]
+    call get_string_length
+    mov [bp + 6], cx
+    mov [file_append_struct+4], cx
+
+    ; set current file length
+    mov si, [bp + 4]
+    mov ax, [si+28]
+    mov [file_append_struct+6], ax
+
+    ; write a string to the end of file
+    call append_file
+    jnz fs_file_append__error
+
+
+    ; copy file's entry to temp buffer
+    mov si, [bp + 4]
+    mov cx, DIRECTORY_ENTRY_SIZE
+    call heap_alloc
+    call copy_nbytes
+
+    ; modify buffer's length field
+    mov ax, [di+28]
+    mov cx, [bp + 6]
+    add ax, cx
+    dec ax
+    mov [di+28], ax
+
+    ; update file's entry and persist it on disk
+    mov si, [bp + 0]
+    call update_non_root_entry
+
+    jz fs_file_append__finish
+
+    fs_file_append__error:
+        mov si, fwrite_error
+        call print_loop
+        jmp fs_file_append__finish
+
+    fs_file_append__not_found:
+        mov si, file_not_found
+        call print_loop
+
+    fs_file_append__finish:
+        erase_frame 8
         ret
 
 %endif

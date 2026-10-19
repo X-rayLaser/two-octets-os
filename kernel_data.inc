@@ -9,6 +9,7 @@ prompt         db "$ ", 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
 file_not_found db "File or directory not found", 0x0D, 0x0A, 0
 cmd_notfound   db "Command not found", 0x0D, 0x0A, 0
+fwrite_error   db "File append error", 0x0D, 0x0A, 0
 
 ; file viewer help
 viewer_help_scroll_down db "Press any key to scroll down", 13, 0
@@ -24,13 +25,14 @@ lbl_media:                    db "Media descriptor (Hex):      ", 0
 lbl_fat_size:                 db "Logical sectors per FAT:     ", 0
 
 ; supported commands
-cmd_fsinfo db "fsinfo", 0
-cmd_echo   db "echo ", 0
-cmd_cat    db "cat ", 0
-cmd_ls     db "ls ", 0
-cmd_rename db "rename", 0
-cmd_mkfile db "mkfile", 0
-cmd_mkdir  db "mkdir", 0
+cmd_fsinfo  db "fsinfo", 0
+cmd_echo    db "echo ", 0
+cmd_cat     db "cat ", 0
+cmd_ls      db "ls ", 0
+cmd_rename  db "rename", 0
+cmd_mkfile  db "mkfile", 0
+cmd_mkdir   db "mkdir", 0
+cmd_fwrite  db "fwrite", 0
 
 file_append_struct times 8 db 0
 cluster_args_struct times 8 db 0 ; data structure storing arguments to update_cluster

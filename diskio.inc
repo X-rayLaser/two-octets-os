@@ -6,7 +6,7 @@ bits 16
     push_registers
 
     xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mov al, [BPB_LOGICAL_SECTORS_PER_CLUSTER] ; number of logical sectors per cluster
     mov [daps+2], ax
 
     call set_cluster_address
@@ -75,7 +75,7 @@ get_cluster_size:
     push dx
 
     xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mov al, [BPB_LOGICAL_SECTORS_PER_CLUSTER] ; number of logical sectors per cluster
     mov bx, [BPB_BYTES_PER_LOGICAL_SECTOR] ; bytes per logical sector
     mul bx                 ; ax = bytes per cluster
     mov cx, ax
@@ -147,7 +147,7 @@ set_cluster_address:
     dec bx
     dec bx
     xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mov al, [BPB_LOGICAL_SECTORS_PER_CLUSTER] ; number of logical sectors per cluster
     mul bx                 ; ax = offset of cluster's first sector
 
     push ax

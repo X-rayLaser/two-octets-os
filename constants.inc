@@ -8,6 +8,8 @@ BPB_LOGICAL_SECTORS_PER_FAT equ 0x7c00+0x016     ; logical sectors per FAT
 BPB_RESERVED_LOGICAL_SECTORS equ 0x7c00+0x00E    ; number of reserved logical sectors
 BPB_NUMBER_OF_DIRECTORY_ENTRIES equ 0x7c00+0x011
 BPB_BYTES_PER_LOGICAL_SECTOR equ 0x7c00+0x00B
+BPB_LOGICAL_SECTORS_PER_CLUSTER equ 0x7c00+0x00D
+
 
 FAT_ADDRESS equ 0x500          ; 8 KB for storing File Allocation Table
 ROOTDIR_ADDRESS equ 0x2500     ; 16 KB for storing Root Directory entries

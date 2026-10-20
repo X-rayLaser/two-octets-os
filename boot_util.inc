@@ -43,7 +43,7 @@ get_next_cluster_num:
 load_file:
     ; set number of sectors to transfer to equal cluster size (in sectors)
     xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mov al, [BPB_LOGICAL_SECTORS_PER_CLUSTER] ; number of logical sectors per cluster
     mov [daps+2], ax
 
     load_file__loop:
@@ -54,7 +54,7 @@ load_file:
     dec bx
     dec bx
     xor ax, ax
-    mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
+    mov al, [BPB_LOGICAL_SECTORS_PER_CLUSTER] ; number of logical sectors per cluster
     mul bx                 ; ax = offset of cluster's first sector
 
     push ax
@@ -80,7 +80,7 @@ load_file:
 
     ; increment data_offset (location of next cluster in RAM) by cluster_size * logical_sector_size
     mov ax, [BPB_BYTES_PER_LOGICAL_SECTOR] ; bytes per logical sector
-    mov cx, [0x7c00+0x00D] ; logical sectors per cluster
+    mov cx, [BPB_LOGICAL_SECTORS_PER_CLUSTER] ; logical sectors per cluster
     mul cx
 
     mov cx, [data_offset]

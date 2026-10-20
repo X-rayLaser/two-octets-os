@@ -37,7 +37,7 @@ bits 16
 
 
 print_bpb:
-    mov si, 0x7c00+0x00B
+    mov si, BPB_BYTES_PER_LOGICAL_SECTOR
 
     print_bpb_field lbl_bytes_per_sector, lodsw
     print_bpb_field lbl_sectors_per_cluster, lodsb

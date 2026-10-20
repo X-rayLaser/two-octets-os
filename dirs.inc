@@ -105,7 +105,7 @@ get_root_entry_sector:
     call get_directory_size ; cx = bytes occupied by existing records
 
     mov ax, cx
-    mov cx, [0x7c00+0x00B]  ; bytes per logical sector
+    mov cx, [BPB_BYTES_PER_LOGICAL_SECTOR]  ; bytes per logical sector
     xor dx, dx
     div cx
     ret

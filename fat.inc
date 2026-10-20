@@ -198,7 +198,7 @@ get_fat_record_sector:
     push bx
     push cx
 
-    mov cx, [0x7c00+0x00B] ; size of logical sector in bytes
+    mov cx, [BPB_BYTES_PER_LOGICAL_SECTOR] ; size of logical sector in bytes
 
     call locate_fat_record
     xor dx, dx

@@ -76,7 +76,7 @@ get_cluster_size:
 
     xor ax, ax
     mov al, [0x7c00+0x00D] ; number of logical sectors per cluster
-    mov bx, [0x7c00+0x00B] ; bytes per logical sector
+    mov bx, [BPB_BYTES_PER_LOGICAL_SECTOR] ; bytes per logical sector
     mul bx                 ; ax = bytes per cluster
     mov cx, ax
 
@@ -244,7 +244,7 @@ get_logical_sector_size:
 
     get_logical_sector_size__finish:
         xor dx, dx
-        mov ax, [0x7c00+0x00B] ; bytes per logical sector
+        mov ax, [BPB_BYTES_PER_LOGICAL_SECTOR] ; bytes per logical sector
         div cx
 
         pop di

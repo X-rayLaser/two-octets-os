@@ -79,7 +79,7 @@ load_file:
     jc some_error
 
     ; increment data_offset (location of next cluster in RAM) by cluster_size * logical_sector_size
-    mov ax, [0x7c00+0x00B] ; bytes per logical sector
+    mov ax, [BPB_BYTES_PER_LOGICAL_SECTOR] ; bytes per logical sector
     mov cx, [0x7c00+0x00D] ; logical sectors per cluster
     mul cx
 
@@ -130,13 +130,13 @@ first_rootdir_sector:
 
 sectors_per_rootdir:
     ; ax will store size of root directory in bytes
-    mov ax, [0x7c00+0x011] ; number of directory entries
+    mov ax, [BPB_NUMBER_OF_DIRECTORY_ENTRIES] ; number of directory entries
     mov bx, DIRECTORY_ENTRY_SIZE
     mul bx
 
     ; ax will store number of logical sectors in root directory
     xor dx, dx
-    mov bx, [0x7c00+0x00B] ; size of logical sector in bytes
+    mov bx, [BPB_BYTES_PER_LOGICAL_SECTOR] ; size of logical sector in bytes
     div bx
     ret
 
@@ -170,7 +170,7 @@ set_lba_address:
 
     set_lba_address__finish:
         xor dx, dx
-        mov ax, [0x7c00+0x00B] ; bytes per logical sector
+        mov ax, [BPB_BYTES_PER_LOGICAL_SECTOR] ; bytes per logical sector
         div cx
 
         ; ax = logical sector * logical sector size

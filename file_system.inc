@@ -117,27 +117,11 @@ fs_rename:
     je fs_rename__root
 
     fs_rename__non_root:
-        ; handle editing non root directory entry
-
-        ; provide address of a new entry
+        ; handle editing non root directory 
+        mov si, [bp + 0]
         mov di, [bp + 6]
-        mov [update_entry_structure], di
-
-        ; load parent directory and get it's starting cluster number
-        mov si, [bp + 2]
-        call load_directory
+        call update_non_root_entry
         jnz fs_rename__error
-
-        ; set cluster number of the directory whose entry needs update
-        mov [update_entry_structure+2], bx
-
-        ; provide old file name to find the entry
-        mov si, [bp + 4]
-        mov [update_entry_structure+4], si
-
-        ; update the entry and write changes to disk
-        call update_directory_entry
-
         jmp fs_rename__finish
 
     fs_rename__root:
@@ -431,6 +415,7 @@ fs_file_append:
         call print_loop
 
     fs_file_append__finish:
+        free_frame_ptr 4
         erase_frame 10
         ret
 

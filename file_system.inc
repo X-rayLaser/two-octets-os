@@ -328,7 +328,7 @@ fs_cat:
 fs_file_append:
     ; si is address of file path
     ; di is address of a string to be appended
-    allocate_frame 8 ; [file path, appended string, file entry, appended length]
+    allocate_frame 10 ; [file path, appended string, file entry, appended length, new entry]
 
     push di
     get_upper_case_path
@@ -366,16 +366,12 @@ fs_file_append:
     mov al, 10 ; \n
     mov [di], al
 
-    ; write a string to the end of file
-    call append_file
-    jnz fs_file_append__error
-
-
     ; copy file's entry to temp buffer
     mov si, [bp + 4]
     mov cx, DIRECTORY_ENTRY_SIZE
     call heap_alloc
     call copy_nbytes
+    mov [bp + 8], di
 
     ; modify buffer's length field
     mov ax, [di+28]
@@ -383,11 +379,47 @@ fs_file_append:
     add ax, cx
     mov [di+28], ax
 
-    ; update file's entry and persist it on disk
-    mov si, [bp + 0]
-    call update_non_root_entry
+    ; write a string to the end of file
+    call append_file
+    jnz fs_file_append__error
 
-    jz fs_file_append__finish
+    mov si, [bp + 0]
+    call is_parent_root
+    jz fs_file_append__root
+
+    fs_file_append__non_root:
+        ; update file's entry and persist it on disk
+        mov si, [bp + 0]
+        mov di, [bp + 8]
+        call update_non_root_entry
+        jz fs_file_append__finish
+        jmp fs_file_append__error
+
+    fs_file_append__root:
+        mov si, [bp + 0]
+        call split_path ; si = /, di = file name
+        call heap_free
+
+        ; set file name of entry to update
+        mov si, di
+        call remove_trailing_slash
+        call fix_file_name
+        mov di, si
+
+        ; set new entry buffer
+        mov si, [bp + 8]
+
+        call update_root_entry
+        jz fs_file_append__root_ok
+
+        mov si, di
+        call heap_free
+        jmp fs_file_append__error
+
+        fs_file_append__root_ok:
+            mov si, di
+            call heap_free
+            jmp fs_file_append__finish
 
     fs_file_append__error:
         mov si, fwrite_error
@@ -399,7 +431,7 @@ fs_file_append:
         call print_loop
 
     fs_file_append__finish:
-        erase_frame 8
+        erase_frame 10
         ret
 
 %endif

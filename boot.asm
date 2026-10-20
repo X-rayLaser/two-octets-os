@@ -98,11 +98,11 @@ read_fat:
   
 
     ; set number of sectors to transfer
-    mov bx, [0x7c00+0x016] ; # logical sectors per FAT
+    mov bx, [BPB_LOGICAL_SECTORS_PER_FAT] ; # logical sectors per FAT
     mov [daps+2], bx
 
     ; set LBA address of sector to read
-    mov ax, [0x7c00+0x00E] ; Reserved logical sectors
+    mov ax, [BPB_RESERVED_LOGICAL_SECTORS] ; Reserved logical sectors
     call set_lba_address
 
     mov ax, FAT_ADDRESS

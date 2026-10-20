@@ -138,10 +138,10 @@ sync_all_fats:
     ; overwrite all FATs on disk with a current in-memory copy
     push_registers
 
-    mov ax, [0x7c00+0x00E] ; Logical sector of the first FAT on disk
+    mov ax, [BPB_RESERVED_LOGICAL_SECTORS] ; Logical sector of the first FAT on disk
 
     xor cx, cx
-    mov cl, [0x7c00+0x010] ; # of FATs on disk
+    mov cl, [BPB_NUM_FATS_ADDRESS] ; # of FATs on disk
     
     sync_all_fats__loop:
         cmp cx, 0
@@ -150,7 +150,7 @@ sync_all_fats:
         call flush_fat
 
         ; go to the address of next FAT on disk
-        mov bx, [0x7c00+0x016]       ; # logical sectors per FAT
+        mov bx, [BPB_LOGICAL_SECTORS_PER_FAT]       ; # logical sectors per FAT
         add ax, bx
 
         dec cx
@@ -173,7 +173,7 @@ flush_fat:
     call get_logical_sector_size ; -> ax, physical sectors per logical sector
 
     ; ax := ax * cx
-    mov cx, [0x7c00+0x016]       ; # logical sectors per FAT
+    mov cx, [BPB_LOGICAL_SECTORS_PER_FAT]       ; # logical sectors per FAT
     mul cx
     mov [daps+2], ax
 
@@ -207,7 +207,7 @@ get_fat_record_sector:
     ; dx = record's byte offset within sector
 
     ; ax = record's relative sector number + first FAT sector 
-    mov bx, [0x7c00+0x00E] ; Reserved logical sectors
+    mov bx, [BPB_RESERVED_LOGICAL_SECTORS] ; Reserved logical sectors
     add ax, bx
 
     pop cx

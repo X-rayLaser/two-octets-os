@@ -117,13 +117,13 @@ init_daps:
 first_rootdir_sector:
     ; find address of Root region
     xor ax, ax
-    mov al, [0x7c00+0x010] ; # of FATs
+    mov al, [BPB_NUM_FATS_ADDRESS] ; # of FATs
 
-    mov bx, [0x7c00+0x016] ; # logical sectors per FAT
+    mov bx, [BPB_LOGICAL_SECTORS_PER_FAT] ; # logical sectors per FAT
 
     mul bx ; ax = # of sectors occupied by FAT region
 
-    mov bx, [0x7c00+0x00E] ; Reserved logical sectors
+    mov bx, [BPB_RESERVED_LOGICAL_SECTORS] ; Reserved logical sectors
     add ax, bx ; ax = first logical sector of root directory
     ret
 

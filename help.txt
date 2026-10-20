@@ -1,0 +1,13 @@
+Supported commands and their usage:
+
+  fsinfo                         Display information about the filesystem.
+  help                           Display this help menu.
+  echo    [arg1 arg2 ...]        Print arguments to the standard output.
+  cat     <path/to/file>         Display the contents of a file.
+  ls      <path/to/dir>          List files and subdirectories in a directory.
+  mkfile  <path/to/newfile>      Create a new empty file.
+  mkdir   <path/to/newdir>       Create a new directory.
+  fwrite  <path/to/file> <str>   Write a string to a specified file.
+  rename  <path/to/file> <name>  Rename a file or directory to a new name.
+
+Note: Arguments in <angle brackets> are required. Arguments in [square brackets] are optional.

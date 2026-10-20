@@ -5,4 +5,5 @@ nasm -f bin kernel.asm -o kernel.bin
 mformat -f 1440 -c 1 -B boot.bin -i microos.img ::
 mcopy -i microos.img kernel.bin ::
 mcopy -i microos.img boot.asm ::
+mcopy -i microos.img help.txt ::
 mcopy -i microos.img build.bash ::/build.bsh

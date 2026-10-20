@@ -5,6 +5,8 @@
 %include "constants.inc"
 
 root_path      db "/", 0
+help_path      db "/help.txt", 0
+
 prompt         db "$ ", 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0
 file_not_found db "File or directory not found", 0x0D, 0x0A, 0
@@ -33,6 +35,7 @@ cmd_rename  db "rename", 0
 cmd_mkfile  db "mkfile", 0
 cmd_mkdir   db "mkdir", 0
 cmd_fwrite  db "fwrite", 0
+cmd_help    db "help", 0
 
 file_append_struct times 8 db 0
 cluster_args_struct times 8 db 0 ; data structure storing arguments to update_cluster

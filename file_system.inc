@@ -146,55 +146,6 @@ fs_rename:
         ret
 
 
-update_non_root_entry:
-    ; handle editing non root directory entry
-    ; si, address of a full path of file whose entry needs updating
-    ; di, address of a new entry for the file
-    ; sets ZF on success
-    push_registers
-
-    ; provide address of a new entry
-    mov [update_entry_structure], di
-
-    call split_path
-
-    ; set cluster number of the directory whose entry needs update
-    call load_directory ; bx : = first cluster number of a directory
-    jnz update_non_root_entry__error
-    mov [update_entry_structure+2], bx
-
-    ; provide old file name to find the entry
-    push si
-    mov si, di
-    call remove_trailing_slash
-    call fix_file_name
-    mov [update_entry_structure+4], si
-    pop si
-    
-    ; update the entry and write changes to disk
-    call update_directory_entry
-    jnz update_non_root_entry__error
-
-    mov ax, 0
-    jmp update_non_root_entry__cleanup
-
-    update_non_root_entry__error:
-        mov ax, 1
-
-    update_non_root_entry__cleanup:
-        ; free parent path
-        call heap_free
-
-        ; free file name
-        mov si, di
-        call heap_free
-    
-    update_non_root_entry__finish:
-        or ax, ax ; set ZF as needed
-        pop_registers
-        ret
-
-
 fs_replace_entry_filename:
     ; si: edited entry address
     ; di: new file name

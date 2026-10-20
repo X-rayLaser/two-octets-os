@@ -5,7 +5,8 @@
 %include "constants.inc"
 
 root_path      db "/", 0
-help_path      db "/help.txt", 0
+help_path      db "/HELP.TXT", 0
+greeting_path  db "/GREETING.TXT", 0
 
 prompt         db "$ ", 0
 msg_disk_error db "Disk accessing error!", 0x0D, 0x0A, 0

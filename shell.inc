@@ -14,6 +14,25 @@ bits 16
 %endmacro
 
 
+shell_entry_point:
+    mov si, greeting_path
+    call find_file
+
+    mov bx, [si+26]
+    mov cx, 512
+    call heap_alloc ; -> di
+    mov [data_offset], di
+
+    push_registers
+    call load_file
+    pop_registers
+    mov si, di
+    push si
+    call show_page
+    pop si
+    call heap_free
+
+
 shell_loop:
     ; show prompt
     mov si, prompt

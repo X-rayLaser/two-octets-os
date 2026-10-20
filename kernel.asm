@@ -7,7 +7,7 @@ bits 16
 mov [boot_drive], dl
 call init_daps
 call heap_init
-jmp shell_loop
+jmp shell_entry_point
 
 
 %include "shell.inc"

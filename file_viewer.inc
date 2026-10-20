@@ -66,8 +66,16 @@ show_page:
         push si
         mov si, buffer
         call print_loop
-        call carriage_return
         pop si
+
+        ; if last character was \n, process it
+        mov al, 10
+        cmp [si-1], al
+        jne show_page__continue
+        call carriage_return
+
+        show_page__continue:
+        
 
         jmp show_page__loop
 

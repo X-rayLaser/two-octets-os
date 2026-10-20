@@ -1,0 +1,2 @@
+Welcome! This is a toy project implementing a tiny 16 bit operating system in real mode.
+Disclaimer: The software is provided as is and comes with no warranty. Use it at your own risk

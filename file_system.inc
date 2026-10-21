@@ -169,13 +169,12 @@ fs_replace_entry_filename:
 
 fs_mkfile:
     ; si is address of path
-    call is_valid_path
-    jnz fs_mkfile__error
-
     get_upper_case_path
-
     push si
 
+    call is_valid_path
+    jnz fs_mkfile__bad_path
+    
     call is_parent_root
     jz fs_mkfile__root
 
@@ -190,7 +189,12 @@ fs_mkfile:
     fs_mkfile__error:
         mov si, file_not_found
         call print_loop
+        jmp fs_mkfile__finish
     
+    fs_mkfile__bad_path:
+        mov si, bad_filename
+        call print_loop
+
     fs_mkfile__finish:
         pop si
         call heap_free

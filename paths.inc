@@ -262,6 +262,8 @@ is_valid_path:
         mov ax, 1
 
     is_valid_path__finish:
+    
+    
         free_frame_ptr 0
         erase_frame 2
 
@@ -273,6 +275,11 @@ is_valid_path:
 is_valid_file_name:
     ; set ZF if file name, si, is valid (8+3)
     push_registers
+
+    call copy_string
+    mov si, di
+
+    call remove_trailing_slash
 
     ; test if string is empty
     mov al, [si]
@@ -316,6 +323,11 @@ split_file_name:
     call detect_dot
     jnz split_file_name__found_dot
 
+    call get_string_length
+    call heap_alloc
+    call copy_nbytes
+    mov si, di
+
     ; return empty string in di (just null terminator)
     mov cx, 1
     call heap_alloc
@@ -327,7 +339,7 @@ split_file_name:
         inc cx
         call heap_alloc ; -> di
 
-        ; copy bx bytes of name to di
+        ; copy bx bytes of name to name part
         dec cx
         mov si, [bp + 0]
         call copy_nbytes
@@ -349,9 +361,7 @@ split_file_name:
         mov cx, [bp + 4]
         call copy_nbytes
 
-        ; put null terminator at dot position
-        mov si, bx
-        mov [si], 0
+        mov si, [bp + 2]
 
     split_file_name__finish:
         erase_frame 6

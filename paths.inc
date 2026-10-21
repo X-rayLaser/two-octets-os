@@ -262,8 +262,6 @@ is_valid_path:
         mov ax, 1
 
     is_valid_path__finish:
-    
-    
         free_frame_ptr 0
         erase_frame 2
 
@@ -275,40 +273,52 @@ is_valid_path:
 is_valid_file_name:
     ; set ZF if file name, si, is valid (8+3)
     push_registers
+    allocate_frame 6 ; [full name copy, name, extension]
 
     call copy_string
     mov si, di
+    mov [bp + 0], di
 
     call remove_trailing_slash
 
     ; test if string is empty
     mov al, [si]
     or al, al
-    jz is_valid_file_name__invalid
+    jz is_valid_file_name__empty
 
     ; split into name (si) and extension (di)
     call split_file_name
 
     ; invalid if name > 8 characters
     call count_string_characters
-    call heap_free
     cmp cx, 8
     jg is_valid_file_name__invalid
 
     ; invalid if extension > 3 characters
     mov si, di
     call count_string_characters
-    call heap_free
     cmp cx, 3
     jg is_valid_file_name__invalid
 
-    sub cx, cx   ; set ZF
-    jmp is_valid_file_name__finish    
+    mov ax, 0
+    jmp is_valid_file_name__cleanup
 
     is_valid_file_name__invalid:
-        or cx, 1 ; clear ZF
+        mov ax, 1 ; clear ZF
+
+    is_valid_file_name__cleanup:
+        free_frame_ptr 0
+        free_frame_ptr 1
+        free_frame_ptr 2
+        jmp is_valid_file_name__finish
+
+    is_valid_file_name__empty:
+        free_frame_ptr 0
+        mov ax, 1
 
     is_valid_file_name__finish:
+        erase_frame 6
+        or ax, ax ; set ZF as needed
         pop_registers
         ret
 
@@ -316,7 +326,7 @@ is_valid_file_name:
 split_file_name:
     ; split file name si into name part (si) and extension part (di)
     push_abcd
-    allocate_frame 6 ; [full name, name part, extension len]
+    allocate_frame 6 ; [original file name, name part, extension len]
 
     mov [bp + 0], si
 

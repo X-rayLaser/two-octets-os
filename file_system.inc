@@ -105,6 +105,7 @@ fs_rename:
     mov [bp + 2], si
     mov [bp + 4], di
     mov si, di
+    call remove_trailing_slash
     call fix_file_name
 
     mov si, [bp + 0]
@@ -185,6 +186,7 @@ fs_replace_entry_filename:
     pop si ; si = new file name
     call to_upper_case
     call fix_file_name
+
     mov cx, 11
     call copy_nbytes
     ret

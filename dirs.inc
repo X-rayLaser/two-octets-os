@@ -676,7 +676,9 @@ find_file:
 
     ; if it succeeds, find the file entry and show file's data
     mov si, di
+    call remove_trailing_slash
     call fix_file_name
+
     call search_dir_entry
     jnz find_file_new__error
     mov [bp + 4], si

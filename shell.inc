@@ -19,7 +19,7 @@ shell_entry_point:
     call find_file
 
     mov bx, [si+26]
-    mov cx, 512
+    mov cx, 1024
     call heap_alloc ; -> di
     mov [data_offset], di
 

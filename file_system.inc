@@ -206,6 +206,8 @@ fs_mkdir:
     get_upper_case_path
 
     push si
+    call is_valid_path
+    jnz fs_mkdir__bad_path
     
     call is_parent_root
     jz fs_mkdir__root
@@ -221,7 +223,12 @@ fs_mkdir:
     fs_mkdir__error:
         mov si, file_not_found
         call print_loop
+        jmp fs_mkdir__finish
     
+    fs_mkdir__bad_path:
+        mov si, bad_filename
+        call print_loop
+
     fs_mkdir__finish:
         pop si
         call heap_free

@@ -239,4 +239,124 @@ is_parent_root:
     ret
 
 
+is_valid_path:
+    ; set ZF if path, si, ends with valid file name
+    push_registers
+    allocate_frame 2 ; [file name]
+
+    call split_path
+
+    mov [bp + 0], di
+
+    ; ignoring the file's directory path
+    call heap_free
+    
+    mov si, di
+    call is_valid_file_name
+    jnz is_valid_path__invalid
+
+    mov ax, 0
+    jmp is_valid_path__finish
+
+    is_valid_path__invalid:
+        mov ax, 1
+
+    is_valid_path__finish:
+        free_frame_ptr 0
+        erase_frame 2
+
+        or ax, ax
+        pop_registers
+        ret
+
+
+is_valid_file_name:
+    ; set ZF if file name, si, is valid (8+3)
+    push_registers
+
+    ; test if string is empty
+    mov al, [si]
+    or al, al
+    jz is_valid_file_name__invalid
+
+    ; split into name (si) and extension (di)
+    call split_file_name
+
+    ; invalid if name > 8 characters
+    call count_string_characters
+    call heap_free
+    cmp cx, 8
+    jg is_valid_file_name__invalid
+
+    ; invalid if extension > 3 characters
+    mov si, di
+    call count_string_characters
+    call heap_free
+    cmp cx, 3
+    jg is_valid_file_name__invalid
+
+    sub cx, cx   ; set ZF
+    jmp is_valid_file_name__finish    
+
+    is_valid_file_name__invalid:
+        or cx, 1 ; clear ZF
+
+    is_valid_file_name__finish:
+        pop_registers
+        ret
+
+
+split_file_name:
+    ; split file name si into name part (si) and extension part (di)
+    push_abcd
+    allocate_frame 6 ; [full name, name part, extension len]
+
+    mov [bp + 0], si
+
+    call detect_dot
+    jnz split_file_name__found_dot
+
+    ; return empty string in di (just null terminator)
+    mov cx, 1
+    call heap_alloc
+    jmp split_file_name__finish
+
+    split_file_name__found_dot:
+        ; allocate bx bytes for name part, plus 1 for null terminator
+        mov cx, bx
+        inc cx
+        call heap_alloc ; -> di
+
+        ; copy bx bytes of name to di
+        dec cx
+        mov si, [bp + 0]
+        call copy_nbytes
+        mov [bp + 2], di
+
+        ; create another empty string for the extention
+        ; extension part len = total len - name len - 1 (the dot)
+        mov si, [bp + 0]
+        call get_string_length
+        sub cx, bx
+        dec cx
+        mov [bp + 4], cx
+        call heap_alloc
+        
+        ; go to the start of the extention and copy extension to di
+        mov si, [bp + 0]
+        add si, bx
+        inc si           ; skip the dot
+        mov cx, [bp + 4]
+        call copy_nbytes
+
+        ; put null terminator at dot position
+        mov si, bx
+        mov [si], 0
+
+    split_file_name__finish:
+        erase_frame 6
+        pop_dcba
+        ret
+
+
 %endif

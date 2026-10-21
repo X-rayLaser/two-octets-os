@@ -169,6 +169,9 @@ fs_replace_entry_filename:
 
 fs_mkfile:
     ; si is address of path
+    call is_valid_path
+    jnz fs_mkfile__error
+
     get_upper_case_path
 
     push si

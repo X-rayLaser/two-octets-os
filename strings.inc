@@ -113,6 +113,7 @@ copy_string:
 
 get_string_length:
     ; returns cx, length of the string counting null terminator
+    push ax
     push si
     
     mov cx, 0
@@ -126,7 +127,15 @@ get_string_length:
 
     get_string_length__finish:
         pop si
+        pop ax
         ret
+
+
+count_string_characters:
+    ; similar to get_string_length, but does not include trailing 0 in the count
+    call get_string_length
+    dec cx
+    ret
 
 
 copy_nbytes:

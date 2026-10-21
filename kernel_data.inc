@@ -14,6 +14,7 @@ file_not_found db "File or directory not found", 0x0D, 0x0A, 0
 cmd_notfound   db "Command not found", 0x0D, 0x0A, 0
 fwrite_error   db "File append error", 0x0D, 0x0A, 0
 bad_filename   db "Invalid path/file name.", 0x0D, 0x0A, 0
+rename_error   db "An error occured while renaming file/directory. ", 0x0D, 0x0A, 0
 
 ; file viewer help
 viewer_help_scroll_down db "Press any key to scroll down", 13, 0

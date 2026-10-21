@@ -92,6 +92,12 @@ fs_rename:
     ; si is address of arg string
     allocate_frame 8; [path_copy, parent_path, child, new_entry_buffer]
 
+    push si
+    mov si, [argv_pointers+4]
+    call is_valid_file_name
+    pop si
+    jnz fs_rename__bad_path
+
     get_upper_case_path
     mov [bp + 0], si
 
@@ -104,7 +110,7 @@ fs_rename:
     mov si, [bp + 0]
     ; retrieve into new temp buffer an entry of the file to be renamed
     call find_file ; file entry -> si
-    jnz fs_rename__error
+    jnz fs_rename__notfound
 
     mov di, [argv_pointers+4]
     call fs_replace_entry_filename
@@ -122,7 +128,7 @@ fs_rename:
         mov di, [bp + 6]
         call update_non_root_entry
         jnz fs_rename__error
-        jmp fs_rename__finish
+        jmp fs_rename__full_cleanup
 
     fs_rename__root:
         ; handle editing root directory entry
@@ -131,17 +137,34 @@ fs_rename:
         call update_root_entry
 
         jnz fs_rename__error
+        jmp fs_rename__full_cleanup
+
+    fs_rename__notfound:
+        mov si, file_not_found
+        call print_loop
+        
+        free_frame_ptr 0
+        free_frame_ptr 1
+        free_frame_ptr 2
+
+        jmp fs_rename__finish
+
+    fs_rename__bad_path:
+        mov si, bad_filename
+        call print_loop
         jmp fs_rename__finish
 
     fs_rename__error:
-        mov si, file_not_found
+        mov si, rename_error
         call print_loop
 
-    fs_rename__finish:
+    fs_rename__full_cleanup:
         free_frame_ptr 0
         free_frame_ptr 1
         free_frame_ptr 2
         free_frame_ptr 3
+
+    fs_rename__finish:
         erase_frame 8
         ret
 

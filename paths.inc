@@ -288,6 +288,8 @@ is_valid_file_name:
 
     ; split into name (si) and extension (di)
     call split_file_name
+    mov [bp + 2], si
+    mov [bp + 4], di
 
     ; invalid if name > 8 characters
     call count_string_characters

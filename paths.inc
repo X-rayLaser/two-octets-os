@@ -9,8 +9,14 @@ split_path:
     ;   si: address of newly created parent path
     ;   di: address of newly created child name
     push_abcd
-    call copy_string ; di -> copy
 
+    ; create a copy of len+1 bytes (to account for needed trailing /)
+    call get_string_length
+    inc cx ; add space for extra / at the end
+    call heap_alloc
+    dec cx
+    call copy_nbytes ; di -> copy
+    
     mov si, di
     push si
 
@@ -39,8 +45,11 @@ get_last_path_segment_index:
     push di
 
     push si
+
+    ; todo: fix potential buffer overflow of the string in the heap: 
     call ensure_trailing_slash
 
+    ; todo: another issue using static buffer
     mov di, buffer
     call clear_buffer
 

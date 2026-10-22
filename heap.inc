@@ -129,6 +129,8 @@ heap_free:
     heap_free__link:
         pop di
         sub si, 4 ; set si to the start of the block's header
+        mov ax, 0
+        mov [si], ax
 
         ; attach freeing block to the end of free block list
         mov [di], si

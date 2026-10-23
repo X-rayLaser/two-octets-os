@@ -9,6 +9,7 @@ split_path:
     ;   si: address of newly created parent path
     ;   di: address of newly created child name
     push_abcd
+    allocate_frame 4 ; [path copy, parent path]
 
     ; create a copy of len+1 bytes (to account for needed trailing /)
     call get_string_length
@@ -16,21 +17,20 @@ split_path:
     call heap_alloc
     dec cx
     call copy_nbytes ; di -> copy
-    
     mov si, di
-    push si
+    mov [bp + 0], si
 
-    mov cx, MAX_FILENAME_LENGTH
-    call heap_alloc  ; di -> new_buffer
     call get_last_path_segment_index
-    add si, bx ; start of the file name
-    mov cx, MAX_FILENAME_LENGTH
-    call copy_nbytes
-    ; putting null terminating character (0) at the start of file name portion
-    mov al, 0
-    mov [si], al
-    pop si
 
+    mov cx, bx
+    call get_string_prefix
+    mov [bp + 2], di
+    call get_string_suffix ; -> di (child)
+
+    mov si, [bp + 2]       ; parent path
+
+    free_frame_ptr 0
+    erase_frame 4
     pop_dcba
     ret
 

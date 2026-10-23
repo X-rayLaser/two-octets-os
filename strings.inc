@@ -300,4 +300,34 @@ compare_strings:
         pop si
         pop cx
         ret
+
+
+get_string_prefix:
+    ; get a copy of firxt cx bytes of string si + \0
+    ; si is the string
+    ; return di, copy
+    push_abcd
+
+    inc cx
+    call heap_alloc
+    dec cx
+    call copy_nbytes
+
+    pop_dcba
+    ret
+
+
+get_string_suffix:
+    ; get tail of the string si starting with index bx
+    ; return di, copy of the tail
+    push_abcd
+    push si
+
+    add si, bx
+    call copy_string
+
+    pop si
+    pop_dcba
+    ret
+
 %endif

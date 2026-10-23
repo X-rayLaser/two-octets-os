@@ -78,11 +78,11 @@ heap_prepare_block:
     sub cx, 4
     mov [si+2], cx
 
-    ; erase leftover data if any
-    call clear_block
-
     ; point si to the first data byte of a new block 
     add si, 4
+
+    ; erase leftover data if any
+    call clear_block
 
     pop ax
     ret

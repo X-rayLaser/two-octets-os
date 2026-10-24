@@ -715,7 +715,7 @@ load_directory:
     push si
     push di
 
-    allocate_frame 2 ; [path copy with trailing /]
+    allocate_frame 4 ; [path copy with trailing /, segment buffer]
     
     mov di, ROOTDIR_ADDRESS
     mov [directory_buffer_ptr], di
@@ -723,6 +723,11 @@ load_directory:
     call ensure_trailing_slash
     mov si, di
     mov [bp + 0], di
+
+    ; allocate a buffer for segments
+    mov cx, MAX_FILENAME_LENGTH
+    call heap_alloc
+    mov [bp + 2], di
 
     ; special case: illegal path without leading /
     mov al, [si]
@@ -742,16 +747,13 @@ load_directory:
         or al, al
         jz load_directory__found
 
-        mov di, buffer
-        call clear_buffer
-    
+        mov di, [bp + 2]
         call parse_path_segment ; next subdirectory name -> buffer
         
         push si
-        mov si, buffer
+        mov si, di
         call fix_file_name
         pop si
-        mov di, buffer ; target sub directory name to load
 
         ; sanity check: buffer must not start with 0
         mov al, [di]
@@ -760,7 +762,6 @@ load_directory:
 
         call load_next_dir
         jnz load_directory__notfound
-
         jmp load_directory__outer_loop
 
     load_directory__notfound:
@@ -772,7 +773,8 @@ load_directory:
 
     load_directory__finish:
         free_frame_ptr 0
-        erase_frame 2
+        free_frame_ptr 1
+        erase_frame 4
         or ax, ax ; set ZF as needed
         pop di
         pop si

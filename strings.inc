@@ -330,4 +330,26 @@ get_string_suffix:
     pop_dcba
     ret
 
+
+create_appended_string:
+    ; copy string si and append a character al to a it
+    ; return di, address of a new string allocated on the heap
+    push_abcd
+    push si
+
+    call get_string_length
+    inc cx
+    call heap_alloc
+    dec cx
+    call copy_nbytes
+
+    dec cx
+    add di, cx
+    mov [di], al
+    sub di, cx
+
+    pop si
+    pop_dcba
+    ret
+
 %endif

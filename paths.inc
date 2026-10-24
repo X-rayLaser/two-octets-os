@@ -48,6 +48,9 @@ get_last_path_segment_index:
 
     ; todo: fix potential buffer overflow of the string in the heap: 
     call ensure_trailing_slash
+    mov si, di
+
+    push si
 
     ; todo: another issue using static buffer
     mov di, buffer
@@ -70,6 +73,7 @@ get_last_path_segment_index:
         pop si
         sub bx, si
 
+        pop si
         pop di
         pop dx
         pop cx
@@ -104,11 +108,14 @@ parse_path_segment:
 
 
 ensure_trailing_slash:
-    push si
+    ; makes a copy of a si string and appends it with slash if one's missing
+    ; returns di, string with trailing slash
+    push_abcd
 
     mov al, [si]
     or al, al
     jz ensure_trailing_slash__add_slash
+    push si
 
     ensure_trailing_slash__loop:
         mov al, [si]
@@ -121,18 +128,20 @@ ensure_trailing_slash:
 
     ensure_trailing_slash__string_end:
         mov al, [si-1]
+        pop si
         cmp al, '/'
-        je ensure_trailing_slash__finish
+        je ensure_trailing_slash__just_copy
 
     ensure_trailing_slash__add_slash:
         mov al, '/'
-        mov [si], al
-        inc si
-        mov al, 0
-        mov [si], al
+        call create_appended_string
+        jmp ensure_trailing_slash__finish
+
+    ensure_trailing_slash__just_copy:
+        call copy_string
 
     ensure_trailing_slash__finish:
-        pop si
+        pop_dcba
         ret
 
 

@@ -706,19 +706,23 @@ find_file:
 
 
 load_directory:
+    ; copies directory data into directory_buffer, sets ZF and saves first directory cluster in bx on success
+    ; si points to the directory path with leading /
+
     push ax
     push cx
     push dx
     push si
     push di
-    
-    ; copies directory data into directory_buffer, sets ZF and saves first directory cluster in bx on success
-    ; si points to the directory path with leading /
 
+    allocate_frame 2 ; [path copy with trailing /]
+    
     mov di, ROOTDIR_ADDRESS
     mov [directory_buffer_ptr], di
 
     call ensure_trailing_slash
+    mov si, di
+    mov [bp + 0], di
 
     ; special case: illegal path without leading /
     mov al, [si]
@@ -728,7 +732,7 @@ load_directory:
     ; special case: directory path is just /
     mov al, [si+1]
     or al, al
-    jz load_directory__finish
+    jz load_directory__found
 
     inc si ; skip leading '/'
 
@@ -736,7 +740,7 @@ load_directory:
         ; end of path: 0 after trailing /
         mov al, [si]
         or al, al
-        jz load_directory__finish
+        jz load_directory__found
 
         mov di, buffer
         call clear_buffer
@@ -760,10 +764,16 @@ load_directory:
         jmp load_directory__outer_loop
 
     load_directory__notfound:
-        or al, 1 ; clear ZF
+        mov ax, 1
         jmp load_directory__finish
 
+    load_directory__found:
+        mov ax, 0
+
     load_directory__finish:
+        free_frame_ptr 0
+        erase_frame 2
+        or ax, ax ; set ZF as needed
         pop di
         pop si
         pop dx

@@ -38,26 +38,23 @@ split_path:
 get_last_path_segment_index:
     ; split path into parent directory path and remaining segment (filename/directory)
     ; stores start position of remaining segment in bx
-
     push ax
     push cx
     push dx
     push di
-
     push si
 
-    ; todo: fix potential buffer overflow of the string in the heap: 
+    allocate_frame 4 ; [path copy ending with /, segment buffer]
+
     call ensure_trailing_slash
     mov si, di
+    mov [bp + 0], si
 
-    push si
-
-    ; todo: another issue using static buffer
-    mov di, buffer
-    call clear_buffer
+    mov cx, MAX_FILENAME_LENGTH
+    call heap_alloc
+    mov [bp + 2], di
 
     inc si
-
     mov bx, si
 
     get_last_path_segment_index__loop:
@@ -70,9 +67,13 @@ get_last_path_segment_index:
         jmp get_last_path_segment_index__loop
 
     get_last_path_segment_index__finish:
-        pop si
+        mov si, [bp + 0]
         sub bx, si
 
+        free_frame_ptr 0
+        free_frame_ptr 1
+        erase_frame 4
+        
         pop si
         pop di
         pop dx

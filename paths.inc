@@ -11,12 +11,7 @@ split_path:
     push_abcd
     allocate_frame 4 ; [path copy, parent path]
 
-    ; create a copy of len+1 bytes (to account for needed trailing /)
-    call get_string_length
-    inc cx ; add space for extra / at the end
-    call heap_alloc
-    dec cx
-    call copy_nbytes ; di -> copy
+    call copy_string ; di -> copy
     mov si, di
     mov [bp + 0], si
 

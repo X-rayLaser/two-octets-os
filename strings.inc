@@ -111,6 +111,50 @@ copy_string:
     ret
 
 
+concat_strings:
+    ; concatenate a (si) and b (di) strings
+    ; allocates a new string for concatenation
+    ; returns di, concatenated string
+    push_abcd
+    push si
+
+    allocate_frame 6 ; [string a, string b, res string]
+
+    mov [bp + 0], si
+    mov [bp + 2], di
+
+    ; compute combined length of result string including \0
+    call count_string_characters
+    mov ax, cx
+    mov si, di
+    call count_string_characters
+    add cx, ax
+    inc cx ; account for trailing \0
+
+    ; allocate result string
+    call heap_alloc
+    mov [bp + 4], di
+
+    ; copy string a to res
+    mov si, [bp + 0]
+    mov di, [bp + 4]
+    call count_string_characters ; chars per string a
+    call copy_nbytes
+
+    ; insert string b to the end of result string
+    add di, cx
+    mov si, [bp + 2]
+    call count_string_characters
+    call copy_nbytes
+
+    mov di, [bp + 4]
+
+    erase_frame 6
+    pop si
+    pop_dcba
+    ret
+
+
 get_string_length:
     ; returns cx, length of the string counting null terminator
     push ax
@@ -303,7 +347,7 @@ compare_strings:
 
 
 get_string_prefix:
-    ; get a copy of firxt cx bytes of string si + \0
+    ; get a copy of first cx bytes of string si + \0
     ; si is the string
     ; return di, copy
     push_abcd
@@ -318,12 +362,12 @@ get_string_prefix:
 
 
 get_string_suffix:
-    ; get tail of the string si starting with index bx
+    ; get tail of the string si starting with index cx
     ; return di, copy of the tail
     push_abcd
     push si
 
-    add si, bx
+    add si, cx
     call copy_string
 
     pop si

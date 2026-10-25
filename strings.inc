@@ -206,6 +206,24 @@ copy_nbytes:
         ret
 
 
+resize_string:
+    ; create a new string of size cx bytes on the heap and copy old string there
+    ; delete old string (assummed to be on the heap as well)
+    ; update old register si with a location of new string
+    push_abcd
+    push di
+
+    call heap_alloc
+    call get_string_length ; get original string (si) len (including \0)
+    call copy_nbytes       ; copy oringal string (si) bytes to a new buffer (di)
+    call heap_free         ; free original string buffer
+    mov si, di             ; update si to contain address of a new string
+
+    pop di
+    pop_dcba
+    ret
+
+
 detect_dot:
     push si
 

@@ -178,7 +178,18 @@ fix_file_name:
     ; pad the extension with white-spaces to be 3 bytes long
     ; remove the dot if present
 
+    push_registers
+
+    ; preserve original string address
     push si
+    ; allocate temporary string big enough to account for right byte shifts
+    mov cx, MAX_FILENAME_LENGTH
+    call heap_alloc
+    call get_string_length
+    call copy_nbytes
+    mov si, di
+
+    ; preserve new string address
     push di
 
     call detect_dot; bx will store the index of the dot
@@ -230,8 +241,16 @@ fix_file_name:
         mov [si+3], al
 
     fix_file_name__finish:
-        pop di
-        pop si
+        ; copy fixed string into old string (assumes old string is at least 8+3+1 bytes long)
+        pop si ; new fixed string address
+        pop di ; original string address
+        mov cx, 12       ; 8+3 bytes for name+extention followed by \0
+        call copy_nbytes
+
+        ; we just copied modified string bytes, so it can be deleted
+        call heap_free
+
+        pop_registers
         ret
 
 

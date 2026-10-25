@@ -103,8 +103,13 @@ fs_rename:
 
     call split_path ; si -> parent_path, di -> child
     mov [bp + 2], si
-    mov [bp + 4], di
+
+    ; resize a string buffer for child to be big enough for growth
     mov si, di
+    mov cx, MAX_FILENAME_LENGTH
+    call resize_string
+    mov [bp + 4], si
+
     call remove_trailing_slash
     call fix_file_name
 

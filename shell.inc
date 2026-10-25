@@ -18,8 +18,8 @@ shell_entry_point:
     mov si, greeting_path
     call find_file
 
-    ; allocate cluster worth of bytes
-    call get_cluster_size
+    ; allocate enough space for a file
+    mov cx, 1024
     mov bx, [si+26]
     call heap_alloc ; -> di
     mov [data_offset], di

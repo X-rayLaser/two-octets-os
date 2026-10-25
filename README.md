@@ -21,10 +21,11 @@ A tiny, toy 16-bit operating system running in x86 Real Mode. It boots from a VB
 ---
 
 ## Features
+* **Bootloader:** Custom bootloader fits into the first 512-byte sector of an unpartitioned disk image to initialize the system and load the kernel.
+* **shell:** Minimalist CLI for managing files and directories
 * **16-bit Pure Assembly:** Written 100% in x86 assembly language (`nasm`), focusing on bare-metal logic and direct BIOS interrupts.
 * **16-bit Real Mode:** Operates strictly within 16-bit CPU registers (exactly *Two Octets* wide).
-* **Volume Boot Record (VBR):** The bootloader fits into the first 512-byte sector of an unpartitioned disk image to initialize the system and load the kernel.
-* **FAT-12 File Manager:** Full integration with classic 1.44MB disk structures using `mtools`.
+* **Basic FAT-12 Implementation:** Powered by a custom set of low-level subroutines that parse the root directory, traverse subdirectories, manage directories, manage File Allocation Table, manage cluster allocation, etc.
 
 ## Shell Commands
 

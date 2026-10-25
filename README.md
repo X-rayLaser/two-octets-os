@@ -9,7 +9,7 @@ A tiny, toy 16-bit operating system running in x86 Real Mode. It boots from a cu
 > **THIS PROJECT IS TEEMING WITH BUGS BY DESIGN.**  
 > **IT WAS BUILT SOLELY FOR THE SAKE OF LEARNING AND HOBBY EXPERIMENTATION.**  
 >
-> * **RUN ONLY IN EMULATORS (QEMU / VIRTUALBOX).**  
+> * **RUN ONLY IN EMULATORS (QEMU).**  
 > * **NEVER ATTEMPT TO RUN THIS OPERATING SYSTEM ON ACTUAL HARDWARE.**  
 >
 > Because this OS operates in 16-bit Real Mode without memory protection, virtual memory, or safety rails, it is highly unstable. Buggy low-level disk writes (`fwrite`/`rename`) or corrupt segment registers could potentially corrupt or overwrite data on your modern physical drives if run on real hardware. 

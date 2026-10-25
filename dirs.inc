@@ -613,6 +613,13 @@ create_directory_entry:
     push_abcd
     push si
 
+    ; allocate temporary string big enough to account for right byte shifts (in fix_file_name)
+    mov cx, MAX_FILENAME_LENGTH
+    call heap_alloc
+    call get_string_length
+    call copy_nbytes
+    mov si, di
+
     call remove_trailing_slash
     call fix_file_name
 
@@ -625,6 +632,9 @@ create_directory_entry:
     mov cx, 11
     call copy_nbytes
     mov [di+26], bx
+
+    ; free temporary string
+    call heap_free
 
     pop si
     pop_dcba

@@ -379,8 +379,12 @@ fs_file_append:
         call split_path ; si = /, di = file name
         call heap_free
 
-        ; set file name of entry to update
+        ; move string to bigger buffer
         mov si, di
+        mov cx, MAX_FILENAME_LENGTH
+        call resize_string
+
+        ; set file name of entry to update
         call remove_trailing_slash
         call fix_file_name
         mov di, si

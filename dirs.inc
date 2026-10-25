@@ -201,47 +201,6 @@ get_directory_size:
         ret
 
 
-load_subdir_entry:
-    ; load parent directory of a given subdirectory and find directory entry describing it
-    ; si: address of a subdirectory path
-    ; on success, si will contain address of target entry
-    push_abcd
-    push di
-
-    ; split path into parent (si) / child (di)
-    call split_path
-
-    ; fix child
-    push si
-    mov si, di
-    call remove_trailing_slash
-    call fix_file_name
-    pop si
-
-    push si
-    push di
-    call load_directory
-    pop di
-    pop si
-    jnz load_subdir_entry__error
-
-    call search_dir_entry
-    jnz load_subdir_entry__error
-
-    ; todo: free allocated memory
-
-    ; ZF already set
-    jmp load_subdir_entry__finish
-
-    load_subdir_entry__error:
-        ; ZF is already cleared
-
-    load_subdir_entry__finish:
-        pop di
-        pop_dcba
-        ret
-
-
 update_root_entry:
     ; scan root directory to find target entry and replace it with a given buffer
     ; si: buffer address
@@ -327,8 +286,11 @@ update_non_root_entry:
     ; provide old file name to find the entry
     push si
     mov si, di
+    mov cx, MAX_FILENAME_LENGTH
+    call resize_string
     call remove_trailing_slash
     call fix_file_name
+    mov di, si
     mov [update_entry_structure+4], si
     pop si
     
@@ -400,48 +362,6 @@ update_directory_entry:
         or ax, bx ; clear ZF
 
     update_directory_entry__finish:
-        pop_registers
-        ret
-
-
-fix_directory_length:
-    ; for a given directory path si, 
-    ; updates it's corresponding entry in a parent directory by increasing the length field
-
-    ; load entry's cluster, finds entry's address and cluster number
-    ; edit it's length field
-    ; write back fixed cluster content to disk
-    push_registers
-
-    ; split path into parent_path (si) / child (di)
-    call split_path
-
-    push si
-    mov si, di
-    call remove_trailing_slash
-    call fix_file_name
-    pop si
-
-    ; store starting cluster into bx
-    call load_directory
-
-    call locate_directory_entry
-    jnz fix_directory_length__finish
-
-    ; todo: free allocated memory
-
-    ; update length in-memory (within cluster_buffer)
-    mov ax, [si+28]
-    mov cx, DIRECTORY_ENTRY_SIZE
-    add ax, cx
-    mov [si+28], ax
-
-    ; update disk cluster
-    call write_cluster
-
-    sub cx, cx ; set ZF (successs flag)
-
-    fix_directory_length__finish:
         pop_registers
         ret
 
@@ -679,8 +599,14 @@ find_file:
     call split_path
     ; si -> parent path, di -> file name
     mov [bp + 0], si
+
+    mov si, di
+    mov cx, MAX_FILENAME_LENGTH
+    call resize_string
+    mov di, si
     mov [bp + 2], di
 
+    mov si, [bp + 0]
     call load_directory ; atempt to load parent directory of whatever is under it
     jnz find_file_new__error ; if that fails, the path must be wrong
 

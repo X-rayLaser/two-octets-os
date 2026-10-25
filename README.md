@@ -2,6 +2,8 @@
 
 A tiny, toy 16-bit operating system running in x86 Real Mode. It boots from a custom VBR directly into a minimalist CLI shell with FAT-12 filesystem support.
 
+![TwoOctets OS Screenshot](images/two-octets-screenshot.png)
+
 ---
 
 ### ⚠️ EDUCATIONAL EXPERIMENT - NOT FOR PRODUCTION USE
